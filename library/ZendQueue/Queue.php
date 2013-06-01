@@ -49,7 +49,7 @@ class Queue implements Countable
     /**
      * User-provided configuration
      *
-     * @var array
+     * @var QueueOptions
      */
     protected $options;
 
