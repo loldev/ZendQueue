@@ -130,10 +130,9 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
         $classname = $queue->getOptions()->getMessageSetClass();
         $collection = $this->mongoDb->selectCollection($queue->getName());
 
-
         do {
 
-            //Cerca il penultimo
+            //FIXME:
             $cursor = $collection->find()->sort(array('_id' => -1));
             $i = 0;
             foreach ($cursor as $lastValue) {
@@ -142,7 +141,6 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
                 $i++;
             }
 
-            //Imposta il cursore tail
             $cursor = $this->_setupCursor($collection, $params, array('_id' => array('$gt' => $lastValue['_id'])), array('_id', self::KEY_HANDLED));
             $cursor->tailable(true);
             $cursor->awaitData(true);
@@ -151,24 +149,23 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
                 if (!$cursor->hasNext()) {
                     // we've read all the results or cursor is dead
                     if ($cursor->dead()) {
-                        echo "dead\n"; //FIXME: should sleep ?
+                        //FIXME: should sleep ?
                         break; //renew cursor
                     }
                     // read all results so far, wait for more
+                    //FIXME: should sleep ?
                 } else {
                     $msg = $cursor->getNext();
 
                     if($msg[self::KEY_HANDLED]) {
-                        echo "handled: ".$msg[self::KEY_HANDLED]."\n";
                         continue;
                     }
 
                     //non-handled message, try to receive it
                     $msg = $this->_receiveMessageAtomic($queue, $collection, $msg['_id']);
 
-                    if(null === $msg) { //meanwhile message has been handled already then ignore it
-                        echo "concurent handled";
-                        continue; //message has been handled already then ignore it
+                    if(null === $msg) {
+                        continue; //meanwhile message has been handled already then ignore it
                     }
 
                     $iterator = new $classname(array($msg), $queue);

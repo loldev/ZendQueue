@@ -24,6 +24,5 @@ interface AwaitCapableInterface extends AdapterInterface
      * @return Message
      * @throws Exception\RuntimeException - database error
      */
-    //public function await(Queue $queue, \Closure $callback = null, ReceiveParameters $params = null);
-
+     public function await(Queue $queue, \Closure $callback = null, ReceiveParameters $params = null);
 }
