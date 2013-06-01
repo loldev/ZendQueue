@@ -10,16 +10,14 @@
 
 namespace ZendQueue\Adapter;
 
-use Traversable;
-use ZendQueue\Message;
+use Zend\Stdlib\Message;
+use ZendQueue\Message\MessageIterator;
 use ZendQueue\Queue;
+use ZendQueue\Parameter\SendParameters;
+use ZendQueue\Parameter\ReceiveParameters;
 
 /**
  * Interface for common queue operations
- *
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Adapter
  */
 interface AdapterInterface
 {
@@ -27,31 +25,19 @@ interface AdapterInterface
      * Constructor
      *
      * @param  array|Traversable $options
-     * @param  Queue $queue
      * @return void
      */
-    public function __construct($options, Queue $queue = null);
+    public function __construct($options);
 
     /**
-     * Retrieve queue instance
+     * Ensure connection
      *
-     * @return Queue
+     * @return bool
      */
-    public function getQueue();
-
-    /**
-     * Set queue instance
-     *
-     * @param  Queue $queue
-     * @return AdapterInterface
-     */
-    public function setQueue(Queue $queue);
+    public function connect();
 
     /**
      * Does a queue already exist?
-     *
-     * Use isSupported('isExists') to determine if an adapter can test for
-     * queue existence.
      *
      * @param  string $name Queue name
      * @return boolean
@@ -61,17 +47,10 @@ interface AdapterInterface
     /**
      * Create a new queue
      *
-     * Visibility timeout is how long a message is left in the queue
-     * "invisible" to other readers.  If the message is acknowleged (deleted)
-     * before the timeout, then the message is deleted.  However, if the
-     * timeout expires then the message will be made available to other queue
-     * readers.
-     *
      * @param  string  $name Queue name
-     * @param  integer $timeout Default visibility timeout
      * @return boolean
      */
-    public function create($name, $timeout=null);
+    public function create($name);
 
     /**
      * Delete a queue and all of its messages
@@ -83,23 +62,6 @@ interface AdapterInterface
      */
     public function delete($name);
 
-    /**
-     * Get an array of all available queues
-     *
-     * Not all adapters support getQueues(); use isSupported('getQueues')
-     * to determine if the adapter supports this feature.
-     *
-     * @return array
-     */
-    public function getQueues();
-
-    /**
-     * Return the approximate number of messages in the queue
-     *
-     * @param  Queue|null $queue
-     * @return integer
-     */
-    public function count(Queue $queue = null);
 
     /********************************************************************
      * Messsage management functions
@@ -108,36 +70,33 @@ interface AdapterInterface
     /**
      * Send a message to the queue
      *
-     * @param  mixed $message Message to send to the active queue
-     * @param  Queue|null $queue
-     * @return Message
+     * @param  Queue $queue
+     * @param  Message $message Message to send to the active queue
+     * @param  SendParameters $params
+     * @return bool
+     * @throws Exception\QueueNotFoundException
+     * @throws Exception\RuntimeException
      */
-    public function send($message, Queue $queue = null);
+    public function send(Queue $queue, Message $message, SendParameters $params = null);
 
     /**
-     * Get messages in the queue
+     * Get messages from the queue
      *
+     * @param  Queue $queue
      * @param  integer|null $maxMessages Maximum number of messages to return
-     * @param  integer|null $timeout Visibility timeout for these messages
-     * @param  Queue|null $queue
-     * @return Message\MessageIterator
+     * @param  ReceiveParameters $params
+     * @return MessageIterator
      */
-    public function receive($maxMessages = null, $timeout = null, Queue $queue = null);
+    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null);
 
-    /**
-     * Delete a message from the queue
-     *
-     * Return true if the message is deleted, false if the deletion is
-     * unsuccessful.
-     *
-     * @param  Message $message
-     * @return boolean
-     */
-    public function deleteMessage(Message $message);
 
     /********************************************************************
      * Supporting functions
      *********************************************************************/
+
+    public function getAvailableReceiveParams();
+
+    public function getAvailableSendParams();
 
     /**
      * Returns the configuration options in this adapter.
@@ -146,21 +105,4 @@ interface AdapterInterface
      */
     public function getOptions();
 
-    /**
-     * Return a list of queue capabilities functions
-     *
-     * $array['function name'] = true or false
-     * true is supported, false is not supported.
-     *
-     * @return array
-     */
-    public function getCapabilities();
-
-    /**
-     * Indicates if a function is supported or not.
-     *
-     * @param  string $name Function name
-     * @return boolean
-     */
-    public function isSupported($name);
 }

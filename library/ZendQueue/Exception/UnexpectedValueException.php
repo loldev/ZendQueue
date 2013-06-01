@@ -13,8 +13,6 @@ namespace ZendQueue\Exception;
 /**
  * Exception for Zend_Queue component.
  *
- * @category   Zend
- * @package    Zend_Queue
  */
 class UnexpectedValueException extends \UnexpectedValueException implements
     ExceptionInterface

@@ -13,8 +13,6 @@ namespace ZendQueue\Exception;
 /**
  * Base exception interface
  *
- * @category   Zend
- * @package    Zend_Queue
  */
 interface ExceptionInterface
 {

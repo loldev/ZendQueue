@@ -8,20 +8,14 @@
  * @package   Zend_Queue
  */
 
-namespace ZendQueue\Adapter\Db;
+namespace ZendQueue\Message;
 
-use Zend\Db\TableGateway\AbstractTableGateway;
+use Zend\Stdlib\Message as StdMessage;
 
 /**
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Adapter
+ *
  */
-class Message extends AbstractTableGateway
+class Message extends StdMessage
 {
-    public function __construct($adapter)
-    {
-        $this->adapter = $adapter;
-        $this->table = 'message';
-    }
+
 }

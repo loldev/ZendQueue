@@ -41,10 +41,14 @@ CREATE TABLE IF NOT EXISTS `message` (
   `message_id` bigint(20) unsigned NOT NULL auto_increment,
   `queue_id` int(10) unsigned NOT NULL,
   `handle` char(32) default NULL,
-  `body` varchar(8192) NOT NULL,
+  `class` varchar(255) NOT NULL,
+  `content` varchar(8192) NOT NULL,
+  `metadata` text default NULL,
   `md5` char(32) NOT NULL,
-  `timeout` decimal(14,4) unsigned default NULL,
-  `created` int(10) unsigned NOT NULL,
+  `timeout` bigint(20) unsigned default NULL,
+  `schedule` bigint(20) unsigned default NULL,
+  `interval` bigint(20) unsigned default NULL,
+  `created` bigint(20) unsigned NOT NULL,
   PRIMARY KEY  (`message_id`),
   UNIQUE KEY `message_handle` (`handle`),
   KEY `message_queueid` (`queue_id`)
@@ -60,13 +64,10 @@ DROP TABLE IF EXISTS `queue`;
 CREATE TABLE IF NOT EXISTS `queue` (
   `queue_id` int(10) unsigned NOT NULL auto_increment,
   `queue_name` varchar(100) NOT NULL,
-  `timeout` smallint(5) unsigned NOT NULL default '30',
   PRIMARY KEY  (`queue_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Constraints for dumped tables
---
+-- --------------------------------------------------------
 
 --
 -- Constraints for table `message`

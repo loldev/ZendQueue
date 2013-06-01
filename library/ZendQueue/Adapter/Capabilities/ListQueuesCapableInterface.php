@@ -8,20 +8,11 @@
  * @package   Zend_Queue
  */
 
-namespace ZendQueue\Adapter\Db;
+namespace ZendQueue\Adapter\Capabilities;
 
-use Zend\Db\TableGateway\AbstractTableGateway;
+use ZendQueue\Adapter\AdapterInterface;
 
-/**
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Adapter
- */
-class Queue extends AbstractTableGateway
+interface ListQueuesCapableInterface extends AdapterInterface
 {
-    public function __construct($adapter)
-    {
-        $this->adapter = $adapter;
-        $this->table = 'queue';
-    }
+    public function getQueues();
 }

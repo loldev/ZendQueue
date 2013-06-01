@@ -13,182 +13,109 @@ namespace ZendQueue;
 use Countable;
 use Traversable;
 use Zend\Stdlib\ArrayUtils;
+use Zend\Stdlib\Message;
+use ZendQueue\Exception;
 use ZendQueue\Adapter\AdapterInterface;
+use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
+use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
+use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
+use ZendQueue\Adapter\Capabilities\ScheduleMessageCapableInterface;
+use ZendQueue\Parameter\SendParameters;
+use ZendQueue\Parameter\ReceiveParameters;
+use ZendQueue\Adapter\Capabilities\FilterMessageCapableInterface;
+use ZendQueue\Adapter\Capabilities\VisibilityTimeoutCapableInterface;
+use Zend\EventManager\EventManagerInterface;
+use Zend\EventManager\Event;
+use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
 
 /**
- * Class for connecting to queues performing common operations.
  *
- * @category   Zend
- * @package    Zend_Queue
  */
 class Queue implements Countable
 {
-    /**
-     * Use the TIMEOUT constant in the config of a Queue
-     */
-    const TIMEOUT = 'timeout';
 
     /**
-     * Default visibility passed to count
+     * Queue name
+     *
+     * @var string
      */
-    const VISIBILITY_TIMEOUT = 30;
-
-    /**
-     * Use the NAME constant in the config of Queue
-     */
-    const NAME = 'name';
+    protected $name;
 
     /**
      * @var AdapterInterface
      */
-    protected $_adapter = null;
+    protected $adapter = null;
 
     /**
      * User-provided configuration
      *
      * @var array
      */
-    protected $_options = array();
-
-    /**
-     * Zend_Queue message class
-     *
-     * @var string
-     */
-    protected $_messageClass = '\ZendQueue\Message';
-
-    /**
-     * Zend_Queue message iterator class
-     *
-     * @var string
-     */
-    protected $_messageSetClass = '\ZendQueue\Message\MessageIterator';
+    protected $options;
 
     /**
      * Constructor
      *
      * Can be called as
-     * $queue = new Queue($config);
+     * $queue = new Queue('default', $config);
      * - or -
-     * $queue = new Queue('ArrayAdapter', $config);
+     * $queue = new Queue('default', 'ArrayAdapter', $config);
      * - or -
-     * $queue = new Queue(null, $config); // Queue->createQueue();
+     * $queue = new Queue('default', null, $config); // Queue->createQueue();
      *
-     * @param  string|AdapterInterface|array|Traversable|null $spec
+     * @param  string $name
+     * @param  string|AdapterInterface|array|Traversable|null $adapter
      * @param  Traversable|array $options
      * @throws Exception\InvalidArgumentException
      */
-    public function __construct($spec, $options = array())
+    public function __construct($name, $adapter, $options = array())
     {
-        $adapter = null;
-        if ($spec instanceof AdapterInterface) {
-            $adapter = $spec;
-        } elseif (is_string($spec)) {
-            $adapter = $spec;
-        } elseif ($spec instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($spec);
-        } elseif (is_array($spec)) {
-            $options = $spec;
+        if (empty($name)) {
+            throw new Exception\InvalidArgumentException('No valid param $name passed to constructor: cannot be empty');
         }
-
-        // last minute error checking
-        if ((null === $adapter)
-            && (!is_array($options) && (!$options instanceof Traversable))
-        ) {
-            throw new Exception\InvalidArgumentException('No valid params passed to constructor');
-        }
-
-        // Now continue as we would if we were a normal constructor
-        if ($options instanceof Traversable) {
-            $options = ArrayUtils::iteratorToArray($options);
-        }
-        if (!is_array($options)) {
-            $options = array();
-        }
-
-        // Make sure we have some defaults to work with
-        if (!isset($options[self::TIMEOUT])) {
-            $options[self::TIMEOUT] = self::VISIBILITY_TIMEOUT;
-        }
-
-        // Make sure all defaults are appropriately set.
-        if (!array_key_exists('timeout', $options)) {
-            $options[self::TIMEOUT] = self::VISIBILITY_TIMEOUT;
-        }
-        if (array_key_exists('messageClass', $options)) {
-            $this->setMessageClass($options['messageClass']);
-        }
-        if (array_key_exists('messageSetClass', $options)) {
-            $this->setMessageSetClass($options['messageSetClass']);
-        }
+        $this->name = $name;
 
         $this->setOptions($options);
 
-        // if we were passed an adapter we either build the $adapter or use it
-        if (null !== $adapter) {
-            $this->setAdapter($adapter);
+        $this->setAdapter($adapter);
+    }
+
+
+    /**
+     * Set options
+     *
+     * @param  array|\Traversable|QueueOptions $options
+     * @return Queue
+     */
+    public function setOptions($options)
+    {
+        if (!$options instanceof QueueOptions) {
+            $options = new QueueOptions($options);
         }
-    }
 
-    /**
-     * Set queue options
-     *
-     * @param  array $options
-     * @return Queue
-     */
-    public function setOptions(array $options)
-    {
-        $this->_options = array_merge($this->_options, $options);
+        $this->options = $options;
         return $this;
     }
 
     /**
-     * Set an individual configuration option
+     * Get options
      *
-     * @param  string $name
-     * @param  mixed $value
-     * @return Queue
-     */
-    public function setOption($name, $value)
-    {
-        $this->_options[(string) $name] = $value;
-        return $this;
-    }
-
-    /**
-     * Returns the configuration options for the queue
-     *
-     * @return array
+     * @return QueueOptions
      */
     public function getOptions()
     {
-        return $this->_options;
-    }
-
-    /**
-     * Determine if a requested option has been defined
-     *
-     * @param  string $name
-     * @return bool
-     */
-    public function hasOption($name)
-    {
-        return array_key_exists($name, $this->_options);
-    }
-
-    /**
-     * Retrieve a single option
-     *
-     * @param  string $name
-     * @return null|mixed Returns null if option does not exist; option value otherwise
-     */
-    public function getOption($name)
-    {
-        if ($this->hasOption($name)) {
-            return $this->_options[$name];
+        if ($this->options === null) {
+            $this->options = new QueueOptions();
         }
-        return null;
+        return $this->options;
     }
+
+
+    public function getName()
+    {
+        return $this->name;
+    }
+
 
     /**
      * Set the adapter for this queue
@@ -200,30 +127,21 @@ class Queue implements Countable
     public function setAdapter($adapter)
     {
         if (is_string($adapter)) {
-            if (null === ($adapterNamespace = $this->getOption('adapterNamespace'))) {
-                $adapterNamespace = '\ZendQueue\Adapter';
-            }
-
-            $adapterName = $adapterNamespace . '\\' . $adapter;
+            $adapterName = $this->getOptions()->getAdapterNamespace() . '\\' . $adapter;
 
             /*
              * Create an instance of the adapter class.
              * Pass the configuration to the adapter class constructor.
              */
-            $adapter = new $adapterName($this->getOptions(), $this);
+            $options = $this->getOptions();
+            $adapter = new $adapterName(array('options' => $options->getAdapterOptions(), 'driverOptions' => $options->getDriverOptions() ));
         }
 
         if (!$adapter instanceof AdapterInterface) {
-            throw new Exception\InvalidArgumentException('Adapter class \'' . get_class($adapterName) . '\' does not implement \ZendQueue\Adapter\'');
+            throw new Exception\InvalidArgumentException('Adapter class \'' . get_class($adapterName) . '\' does not implement \ZendQueue\Adapter\AdapterInterface\'');
         }
 
-        $this->_adapter = $adapter;
-
-        $this->_adapter->setQueue($this);
-
-        if (null !== ($name = $this->getOption(self::NAME))) {
-            $this->_setName($name);
-        }
+        $this->adapter = $adapter;
 
         return $this;
     }
@@ -235,99 +153,24 @@ class Queue implements Countable
      */
     public function getAdapter()
     {
-        return $this->_adapter;
+        return $this->adapter;
     }
 
-    /**
-     * @param  string $className
-     * @return Queue Provides a fluent interface
-     */
-    public function setMessageClass($className)
-    {
-        $this->_messageClass = (string) $className;
-        return $this;
-    }
 
     /**
-     * @return string
-     */
-    public function getMessageClass()
-    {
-        return $this->_messageClass;
-    }
-
-    /**
-     * @param  string $className
-     * @return Queue Provides a fluent interface
-     */
-    public function setMessageSetClass($className)
-    {
-        $this->_messageSetClass = (string) $className;
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getMessageSetClass()
-    {
-        return $this->_messageSetClass;
-    }
-
-    /**
-     * Get the name of the queue
+     * Ensure that this queue exist
      *
-     * Note: _setName() used to exist, but it caused confusion with createQueue
-     * Will evaluate later to see if we should add it back in.
-     *
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->getOption(self::NAME);
-    }
-
-    /**
-     * Create a new queue
-     *
-     * @param  string           $name    queue name
-     * @param  integer          $timeout default visibility timeout
-     * @return Queue|false
+     * @return bool
      * @throws Exception\InvalidArgumentException
      */
-    public function createQueue($name, $timeout = null)
+    public function ensureQueue()
     {
-        if (!is_string($name)) {
-            throw new Exception\InvalidArgumentException('$name is not a string');
+        $name = $this->getName();
+        if($this->getAdapter()->isExists($name)) {
+            return true;
         }
 
-        if ((null !== $timeout) && !is_integer($timeout)) {
-            throw new Exception\InvalidArgumentException('$timeout must be an integer');
-        }
-
-        // Default to standard timeout
-        if (null === $timeout) {
-            $timeout = $this->getOption(self::TIMEOUT);
-        }
-
-        // Some queues allow you to create on the fly, but cannot return
-        // a list of queues.  Stomp protocol for example.
-        if ($this->isSupported('create')) {
-            if ($this->getAdapter()->isExists($name)) {
-                return false;
-            }
-
-            if (!$this->getAdapter()->create($name, $timeout)) {
-                return false;
-            }
-        }
-
-        $options = array(
-            self::NAME  => $name,
-            'timeout'   => $timeout
-        );
-
-        return new self($this->getAdapter(), $options);
+        return $this->getAdapter()->create($name);
     }
 
     /**
@@ -340,14 +183,15 @@ class Queue implements Countable
      */
     public function deleteQueue()
     {
-        if ($this->isSupported('delete')) {
-            $deleted = $this->getAdapter()->delete($this->getName());
-        } else {
-            $deleted = true;
+        $name = $this->getName();
+        $adapter = $this->getAdapter();
+
+        if($adapter->isExists($name)) {
+            $deleted = $adapter->delete($name);
         }
 
         /**
-         * @see \ZendQueue\Adapter\Null
+         * @see Adapter\Null
          */
         $this->setAdapter(new Adapter\Null($this->getOptions()));
 
@@ -360,109 +204,171 @@ class Queue implements Countable
      * Returns true if the message is deleted, false if the deletion is
      * unsuccessful.
      *
-     * Returns true if the adapter doesn't support message deletion.
      *
      * @param  Message $message
      * @return boolean
-     * @throws Exception\ExceptionInterface
+     * @throws Exception\UnsupportedMethodCallException
      */
     public function deleteMessage(Message $message)
     {
-        if ($this->getAdapter()->isSupported('deleteMessage')) {
-            return $this->getAdapter()->deleteMessage($message);
+        if (!$this->canDeleteMessage()) {
+            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
         }
-        return true;
+
+        return $this->getAdapter()->deleteMessage($this, $message);
     }
 
     /**
      * Send a message to the queue
      *
      * @param  mixed $message message
-     * @return Message
+     * @param  SendParamters $params
+     * @return bool
      * @throws Exception\ExceptionInterface
      */
-    public function send($message)
+    public function send($message, SendParameters $params = null)
     {
-        return $this->getAdapter()->send($message);
+        if (!($message instanceof \Zend\Stdlib\Message)) {
+            $data = $message;
+            $messageClass = $this->getOptions()->getMessageClass();
+            if (is_string($data)) {
+                $message = new $messageClass;
+                $message->setContent($data);
+            } else if(is_array($data) && isset($data['content'])) {
+                $message = new $messageClass;
+                $message->setContent((string) $data['content']);
+                if (isset($data['metadata'])) {
+                    $message->setMetadata($data['metadata']);
+                }
+            } else {
+                throw new Exception\InvalidArgumentException('Invalid $message type');
+            }
+        }
+
+        return $this->getAdapter()->send($this, $message, $params);
+    }
+
+
+    /**
+     * Schedule a message to the queue
+     *
+     * @param  mixed $message message
+     * @param  int $schedule
+     * @param  int $interval
+     * @param  SendParamters $params
+     * @return bool
+     * @throws Exception\UnsupportedMethodCallException
+     */
+    public function schedule($message, $schedule = null, $interval = null, SendParameters $params = null)
+    {
+        if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
+            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
+        }
+
+        if ($interval !== null && !$this->isSendParamSupported(SendParameters::INTERVAL)) {
+            if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
+                throw new Exception\UnsupportedMethodCallException('\'interval\' param is not supported by ' . get_class($this->getAdapter()));
+            }
+
+        }
+
+        if ($params === null) {
+            $params = new SendParameters();
+        }
+
+        $params->setScheduling($schedule, $interval);
+
+        return $this->send($message, $params);
     }
 
     /**
      * Returns the approximate number of messages in the queue
      *
-     * @return integer
+     * Returns null if the adapter doesn't support message count.
+     *
+     * @return integer|null
      */
     public function count()
     {
-        if ($this->getAdapter()->isSupported('count')) {
-            return $this->getAdapter()->count();
+        if ($this->canCountMessages()) {
+            return $this->getAdapter()->countMessages($this);
         }
-        return 0;
+        return null;
     }
 
     /**
      * Return the first element in the queue
      *
      * @param  integer $maxMessages
-     * @param  integer $timeout
+     * @param  ReceiveParameters $params
      * @return Message\MessageIterator
      * @throws Exception\InvalidArgumentException
      */
-    public function receive($maxMessages=null, $timeout=null)
+    public function receive($maxMessages = 1, ReceiveParameters $params = null)
     {
-        if (($maxMessages !== null) && !is_integer($maxMessages)) {
-            throw new Exception\InvalidArgumentException('$maxMessages must be an integer or null');
+        if (($maxMessages !== null) && (!is_integer($maxMessages) || $maxMessages < 1)) {
+            throw new Exception\InvalidArgumentException('$maxMessages must be an integer greater than 0 or null');
         }
 
-        if (($timeout !== null) && !is_integer($timeout)) {
-            throw new Exception\InvalidArgumentException('$timeout must be an integer or null');
-        }
-
-        // Default to returning only one message
-        if ($maxMessages === null) {
-            $maxMessages = 1;
-        }
-
-        // Default to standard timeout
-        if ($timeout === null) {
-            $timeout = $this->getOption(self::TIMEOUT);
-        }
-
-        return $this->getAdapter()->receive($maxMessages, $timeout);
+        return $this->getAdapter()->receive($this, $maxMessages, $params);
     }
+
 
     /**
-     * Return a list of queue capabilities functions
+     * Await messages
      *
-     * $array['function name'] = true or false
-     * true is supported, false is not supported.
-     *
-     * @param  string $name
-     * @return array
+     * @param  ReceiveParameters $params
+     * @param  mixed $eventManagerOrClosure
+     * @return Message
+     * @throws Exception\InvalidArgumentException
      */
-    public function getCapabilities()
+    public function await(ReceiveParameters $params = null, $eventManagerOrClosure = null)
     {
-        return $this->getAdapter()->getCapabilities();
-    }
 
-    /**
-     * Indicates if a function is supported or not.
-     *
-     * @param  string $name
-     * @return boolean
-     */
-    public function isSupported($name)
-    {
-        $translation = array(
-            'deleteQueue' => 'delete',
-            'createQueue' => 'create'
-        );
-
-        if (isset($translation[$name])) {
-            $name = $translation[$name];
+        if ($eventManagerOrClosure instanceof EventManagerInterface) {
+            $closure = function(Message $message) use($eventManagerOrClosure) {
+                $event = new Event();
+                $event->setParam('message', $message);
+                return !$eventManagerOrClosure->trigger($event)->stopped();
+            };
+        } elseif ($eventManagerOrClosure instanceof \Closure) {
+            $closure = $eventManagerOrClosure;
+        } elseif ($eventManagerOrClosure === null) {
+            $closure = null;
+        } else {
+            throw new Exception\InvalidArgumentException('Invalid $eventManagerOrClosure type: must be EventManagerInterface, Closure or null.');
         }
 
-        return $this->getAdapter()->isSupported($name);
+        //the adpater support await?
+        if ($this->getAdapter() instanceof AwaitCapableInterface) {
+            return $this->getAdapter()->await($this, $closure, $params);
+        }
+
+        //emulate?
+        if ($this->getOptions()->getEnableAwaitEmulation()) {
+
+            $sleepSeconds = $this->getOptions()->getPollingInterval();
+
+            do {
+                $await = true;
+                $message = null;
+                $messages = $this->receive(1, $params);
+
+                if ($messages->count()) {
+                    $message = $messages->current();
+                    $await = $closure($message);
+                } else {
+                    sleep($sleepSeconds);
+                }
+
+            } while($await);
+
+            return $message;
+        }
+
+        throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()) . ' and await emulation is not enabled.');
     }
+
 
     /**
      * Get an array of all available queues
@@ -472,43 +378,52 @@ class Queue implements Countable
      */
     public function getQueues()
     {
-        if (!$this->isSupported('getQueues')) {
+        if (!$this->canListQueues()) {
             throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
         }
 
         return $this->getAdapter()->getQueues();
     }
 
-    /**
-     * Set the name of the queue
-     *
-     * This is AN UNSUPPORTED FUNCTION
-     *
-     * @param  string           $name
-     * @return Queue|false Provides a fluent interface
-     * @throws Exception\InvalidArgumentException
-     */
-    protected function _setName($name)
+
+    /********************************************************************
+     * Available Parameters
+    *********************************************************************/
+
+    public function isSendParamSupported($name)
     {
-        if (!is_string($name)) {
-            throw new Exception\InvalidArgumentException("$name is not a string");
-        }
-
-        if ($this->getAdapter()->isSupported('create')) {
-            if (!$this->getAdapter()->isExists($name)) {
-                $timeout = $this->getOption(self::TIMEOUT);
-
-                if (!$this->getAdapter()->create($name, $timeout)) {
-                    // Unable to create the new queue
-                    return false;
-                }
-            }
-        }
-
-        $this->setOption(self::NAME, $name);
-
-        return $this;
+        return in_array(strtolower($name), $this->getAdapter()->getAvailableSendParams());
     }
+
+    public function isReceiveParamSupported($name)
+    {
+        return in_array(strtolower($name), $this->getAdapter()->getAvailableReceiveParams());
+    }
+
+    /********************************************************************
+     * Capabilities
+    *********************************************************************/
+
+    public function canAwait()
+    {
+        return ($this->getAdapter() instanceof AwaitCapableInterface) || ($this->getOption(self::EMULATE_AWAIT));
+    }
+
+    public function canDeleteMessage()
+    {
+        return $this->getAdapter() instanceof DeleteMessageCapableInterface;
+    }
+
+    public function canCountMessages()
+    {
+        return $this->getAdapter() instanceof CountMessagesCapableInterface;
+    }
+
+    public function canListQueues()
+    {
+        return $this->getAdapter() instanceof ListQueuesCapableInterface;
+    }
+
 
     /**
      * returns a listing of Queue details.
@@ -521,15 +436,13 @@ class Queue implements Countable
         $info = array();
         $info['self']                     = get_called_class();
         $info['adapter']                  = get_class($this->getAdapter());
-        foreach ($this->getAdapter()->getCapabilities() as $feature => $supported) {
-            $info['adapter-' . $feature]  = ($supported) ? 'yes' : 'no';
-        }
-        $info['options']                  = $this->getOptions();
-        $info['options']['driverOptions'] = '[hidden]';
         $info['currentQueue']             = $this->getName();
-        $info['messageClass']             = $this->getMessageClass();
-        $info['messageSetClass']          = $this->getMessageSetClass();
+        $info['messageClass']             = $this->getOptions()->getMessageClass();
+        $info['messageSetClass']          = $this->getOptions()->getMessageSetClass();
 
         return $info;
     }
+
+
+
 }

@@ -12,14 +12,10 @@ namespace ZendQueue\Message;
 
 use Countable;
 use Iterator;
-use ZendQueue\Adapter\AdapterInterface;
-use ZendQueue\Exception;
 use ZendQueue\Queue;
 
 /**
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Message
+ *
  */
 class MessageIterator implements Countable, Iterator
 {
@@ -32,7 +28,7 @@ class MessageIterator implements Countable, Iterator
 
      /**
      * Connected is true if we have a reference to a live
-     * \ZendQueue\Adapter object.
+     * Queue object.
      * This is false after the Message has been deserialized.
      *
      * @var boolean
@@ -40,9 +36,9 @@ class MessageIterator implements Countable, Iterator
     protected $_connected = true;
 
     /**
-     * Adapter parent class or instance
+     * Queue instance
      *
-     * @var AdapterInterface
+     * @var Queue
      */
     protected $_queue = null;
 
@@ -54,11 +50,19 @@ class MessageIterator implements Countable, Iterator
     protected $_queueClass = null;
 
     /**
-     * Message class name
+     * Name of the queue
      *
      * @var string
      */
-    protected $_messageClass = '\ZendQueue\Message';
+    protected $_queueName = null;
+
+    /**
+     * Default Message class name, only used if not specified in data
+     *
+     * @var string
+     */
+    protected $_messageClass = '\ZendQueue\Message\Message';
+
 
      /**
      * MessageIterator pointer.
@@ -70,42 +74,54 @@ class MessageIterator implements Countable, Iterator
     /**
      * Constructor
      *
-     * @param  array $options ('queue', 'messageClass', 'data'=>array());
-     * @throws Exception\InvalidArgumentException
+     * $data items must be
+     *  - Message object
+     * OR
+     *  - array(
+     *    'class'     => string (message class, optional)
+     *    'metadata'  => array
+     *    'content'   => string
+     *  )
+     *
+     *
+     * @param array $data
+     * @param Queue $queue
      */
-    public function __construct(array $options = array())
+    public function __construct(array $data = array(), Queue $queue = null)
     {
-        if (isset($options['queue'])) {
-            $this->_queue      = $options['queue'];
-            $this->_queueClass = get_class($this->_queue);
-            $this->_connected  = true;
+        if ($queue) {
+            $this->_queue          = $queue;
+            $this->_queueClass     = get_class($queue);
+            $this->_queueName      = $queue->getName();
+            $this->_messageClass   = $queue->getOptions()->getMessageClass();
+            $this->_connected      = true;
         } else {
             $this->_connected = false;
         }
-        if (isset($options['messageClass'])) {
-            $this->_messageClass = $options['messageClass'];
-        }
 
-        if (!is_array($options['data'])) {
-            throw new Exception\InvalidArgumentException('array options must have $options[\'data\'] = array');
-        }
+        $this->_data = $data;
+    }
 
-        // set the message class
-        $classname = $this->_messageClass;
+    protected function _lazyMessageFactory($index)
+    {
+        if (!($this->_data[$index] instanceof Message)) {
+            $data = $this->_data[$index];
+            $msgClass = isset($data['class']) ? $data['class'] : $this->_messageClass;
 
-        // for each of the messages
-        foreach ($options['data'] as $data) {
-            // construct the message parameters
-            $message = array('data' => $data);
+            /* @var $message \Zend\Stdlib\Message */
+            $message = new $msgClass;
 
-            // If queue has not been set, then use the default.
-            if (empty($message['queue'])) {
-                $message['queue'] = $this->_queue;
+            if (isset($data['content'])) {
+                $message->setContent($data['content']);
             }
 
-            // construct the message and add it to _data[];
-            $this->_data[] = new $classname($message);
+            if (isset($data['metadata'])) {
+                $message->setMetadata($data['metadata']);
+            }
+
+            $this->_data[$index] = $message;
         }
+        return $this->_data[$index];
     }
 
     /**
@@ -115,7 +131,7 @@ class MessageIterator implements Countable, Iterator
      */
     public function __sleep()
     {
-        return array('_data', '_queueClass', '_messageClass', '_pointer');
+        return array('_data', '_queueClass', '_queueName', '_messageClass', '_pointer');
     }
 
     /**
@@ -130,22 +146,6 @@ class MessageIterator implements Countable, Iterator
         $this->_connected = false;
     }
 
-    /**
-     * Returns all data as an array.
-     *
-     * Used for debugging.
-     *
-     * @return array
-     */
-    public function toArray()
-    {
-        // @todo This works only if we have iterated through
-        // the result set once to instantiate the messages.
-        foreach ($this->_data as $i => $message) {
-            $this->_data[$i] = $message->toArray();
-        }
-        return $this->_data;
-    }
 
     /**
      * Returns the queue object, or null if this is disconnected message set
@@ -157,27 +157,27 @@ class MessageIterator implements Countable, Iterator
         return $this->_queue;
     }
 
-    /**
-     * Set the queue object, to re-establish a live connection
-     * to the queue for a Message that has been de-serialized.
-     *
-     * @param  AdapterInterface $queue
-     * @return boolean
-     * @throws Exception\ExceptionInterface
-     */
-    public function setQueue(Queue $queue)
-    {
-        $this->_queue     = $queue;
-        $this->_connected = false;
+//     /**
+//      * Set the queue object, to re-establish a live connection
+//      * to the queue for a Message that has been de-serialized.
+//      *
+//      * @param  AdapterInterface $queue
+//      * @return boolean
+//      * @throws Exception\ExceptionInterface
+//      */
+//     public function setQueue(Queue $queue)
+//     {
+//         $this->_queue     = $queue;
+//         $this->_connected = false;
 
-        // @todo This works only if we have iterated through
-        // the result set once to instantiate the rows.
-        foreach ($this->_data as $i => $message) {
-            $this->_connected = $this->_connected || $message->setQueue($queue);
-        }
+//         // @todo This works only if we have iterated through
+//         // the result set once to instantiate the rows.
+//         foreach ($this->_data as $i => $message) {
+//             $this->_connected = $this->_connected || $message->setQueue($queue);
+//         }
 
-        return $this->_connected;
-    }
+//         return $this->_connected;
+//     }
 
     /**
      * Query the class name of the Queue object for which this
@@ -211,13 +211,13 @@ class MessageIterator implements Countable, Iterator
      * Similar to the current() function for arrays in PHP
      * Required by interface MessageIterator.
      *
-     * @return \ZendQueue\Message current element from the collection
+     * @return \Zend\Stdlib\Message current element from the collection
      */
     public function current()
     {
         return (($this->valid() === false)
             ? null
-            : $this->_data[$this->_pointer]); // return the messages object
+            : $this->_lazyMessageFactory($this->_pointer)); // return the messages object
     }
 
     /**
@@ -253,7 +253,7 @@ class MessageIterator implements Countable, Iterator
      */
     public function valid()
     {
-        return $this->_pointer < count($this);
+        return $this->_pointer < count($this->_data);
     }
 
     /*

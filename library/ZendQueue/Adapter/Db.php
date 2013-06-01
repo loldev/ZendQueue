@@ -10,34 +10,44 @@
 
 namespace ZendQueue\Adapter;
 
-use Traversable;
 use Zend\Db as ZendDb;
-use Zend\Db\Adapter\Driver\StatementInterface;
-use Zend\Db\ResultSet\ResultSet;
-use Zend\Db\Sql\Select;
 use Zend\Db\Sql\Sql;
-use Zend\Db\TableGateway\Feature\RowGatewayFeature;
-use Zend\Db\TableGateway\TableGateway;
+use Zend\Stdlib\Message;
 use ZendQueue\Exception;
-use ZendQueue\Message;
 use ZendQueue\Queue;
+use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
+use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
+use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
+use ZendQueue\Adapter\Capabilities\ScheduleMessageCapableInterface;
+use ZendQueue\Parameter\SendParameters;
+use ZendQueue\Parameter\ReceiveParameters;
+use ZendQueue\Adapter\AbstractAdapter;
 
 /**
  * Class for using connecting to a Zend_DB-based queuing system
  *
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Adapter
  */
-class Db extends AbstractAdapter
+class Db extends AbstractAdapter implements
+                                    CountMessagesCapableInterface,
+                                    DeleteMessageCapableInterface,
+                                    ListQueuesCapableInterface
 {
     /**
-     * @var Db\Queue
+     * User-provided options
+     *
+     * @var array
+     */
+    protected $_options = array(
+        'queueTableName'     => 'queue',
+        'messageTableName'   => 'message'
+    );
+    /**
+     * @var ZendDb\TableGateway\TableGateway
      */
     protected $queueTable = null;
 
     /**
-     * @var Db\Message
+     * @var ZendDb\TableGateway\TableGateway
      */
     protected $messageTable = null;
 
@@ -45,38 +55,33 @@ class Db extends AbstractAdapter
      * @var \Zend\Db\Adapter\Adapter
      */
     protected $adapter= null;
-    
+
     /**
      * Constructor
      *
      * @param  array|Traversable $options
-     * @param  Queue|null $queue
      */
-    public function __construct($options, Queue $queue = null)
+    public function __construct($options)
     {
-        parent::__construct($options, $queue);
+        parent::__construct($options);
 
-        $this->adapter= $this->_initDBAdapter();
-        $this->queueTable = new Db\Queue($this->adapter);
-        $this->messageTable = new Db\Message($this->adapter);
-        $this->create($queue->getName());
-
+        $this->connect();
     }
 
     /**
      * Get the TableGateway implementation of the queue table
-     * 
-     * @return Db\Queue
+     *
+     * @return ZendDb\TableGateway\TableGateway
      */
     public function getQueueTable()
     {
         return $this->queueTable;
     }
-    
+
     /**
      * Get the TableGateway implementation of the message table
      *
-     * @return Db\Message
+     * @return ZendDb\TableGateway\TableGateway
      */
     public function getMessageTable()
     {
@@ -84,52 +89,48 @@ class Db extends AbstractAdapter
     }
 
     /**
-     * Initialize DB adapter using 'driverOptions' section of the _options array
+     * Connect (or refresh connection) to the db adapter
      *
      * Throws an exception if the adapter cannot connect to DB.
      *
-     * @return \Zend\Db\Adapter\AbstractAdapter
-     * @throws Exception\InvalidArgumentException
+     * @return bool
      * @throws Exception\ConnectionException
      */
-    protected function _initDBAdapter()
+    public function connect()
     {
-        $options = &$this->_options['driverOptions'];
-        if (!array_key_exists('type', $options)) {
-            throw new Exception\InvalidArgumentException("Configuration array must have a key for 'type' for the database type to use");
-        }
-
-        if (!array_key_exists('host', $options)) {
-            throw new Exception\InvalidArgumentException("Configuration array must have a key for 'host' for the host to use");
-        }
-
-        if (!array_key_exists('username', $options)) {
-            throw new Exception\InvalidArgumentException("Configuration array must have a key for 'username' for the username to use");
-        }
-
-        if (!array_key_exists('password', $options)) {
-            throw new Exception\InvalidArgumentException("Configuration array must have a key for 'password' for the password to use");
-        }
-
-        if (!array_key_exists('dbname', $options)) {
-            throw new Exception\InvalidArgumentException("Configuration array must have a key for 'dbname' for the database to use");
-        }
-
-        $type = $options['type'];
-        unset($options['type']);
-
         try {
-            $db = new ZendDb\Adapter\Adapter(array_merge($options, array('driver' => $type)));
+            $this->adapter = new ZendDb\Adapter\Adapter($this->_options['driverOptions']);
+            $this->queueTable = new ZendDb\TableGateway\TableGateway($this->_options['queueTableName'], $this->adapter);
+            $this->messageTable = new ZendDb\TableGateway\TableGateway($this->_options['messageTableName'], $this->adapter);
         } catch (ZendDb\Exception\ExceptionInterface $e) {
             throw new Exception\ConnectionException('Error connecting to database: ' . $e->getMessage(), $e->getCode(), $e);
         }
 
-        return $db;
+        return true;
     }
+
 
     /********************************************************************
      * Queue management functions
      *********************************************************************/
+
+    public function getAvailableSendParams()
+    {
+        return array(
+            SendParameters::SCHEDULE,
+            SendParameters::INTERVAL,
+            SendParameters::TIMEOUT
+        );
+    }
+
+    public function getAvailableReceiveParams()
+    {
+        return array(
+          ReceiveParameters::MSG_CLASS,
+          ReceiveParameters::TIMEOUT,
+        );
+    }
+
 
     /**
      * Does a queue already exist?
@@ -158,30 +159,20 @@ class Db extends AbstractAdapter
     /**
      * Create a new queue
      *
-     * Visibility timeout is how long a message is left in the queue "invisible"
-     * to other readers.  If the message is acknowleged (deleted) before the
-     * timeout, then the message is deleted.  However, if the timeout expires
-     * then the message will be made available to other queue readers.
-     *
      * @param  string  $name    queue name
-     * @param  integer $timeout default visibility timeout
      * @return boolean
      * @throws Exception\RuntimeException - database error
      */
-    public function create($name, $timeout = null)
+    public function create($name)
     {
         if ($this->isExists($name)) {
             return false;
         }
-        
-        if(null === $timeout) {
-            $timeout = self::CREATE_TIMEOUT_DEFAULT;
-        }
 
-        try { 
-            $result = $this->queueTable->insert(array('queue_name' => $name, 'timeout' => $timeout));
+        try {
+            $result = $this->queueTable->insert(array('queue_name' => $name));
         } catch(\Exception $e) {
-            throw new Exception\RuntimeException($e->getMessage(), $e->getCode());
+            throw new Exception\RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
 
         if ($result) {
@@ -238,7 +229,7 @@ class Db extends AbstractAdapter
         foreach($result as $one) {
             $this->_queues[$one['queue_name']] = (int)$one['queue_id'];
         }
-        
+
         $list = array_keys($this->_queues);
 
         return $list;
@@ -251,12 +242,8 @@ class Db extends AbstractAdapter
      * @return integer
      * @throws Exception\ExceptionInterface
      */
-    public function count(Queue $queue = null)
+    public function countMessages(Queue $queue)
     {
-        if ($queue === null) {
-            $queue = $this->_queue;
-        }
-
         $info  = $this->messageTable->select(array('queue_id' => $this->getQueueId($queue->getName())));
 
         // return count results
@@ -270,77 +257,71 @@ class Db extends AbstractAdapter
     /**
      * Send a message to the queue
      *
-     * @param  string     $message Message to send to the active queue
      * @param  Queue $queue
-     * @return Message
+     * @param  Message $message Message to send to the active queue
+     * @param  SendParameters $params
+     * @return bool
      * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException
      */
-    public function send($message, Queue $queue = null)
+    public function send(Queue $queue, Message $message, SendParameters $params = null)
     {
-        if ($queue === null) {
-            $queue = $this->_queue;
-        }
 
-        if (is_scalar($message)) {
-            $message = (string) $message;
-        }
-        if (is_string($message)) {
-            $message = trim($message);
-        }
-
-        if (!$this->isExists($queue->getName())) {
-            throw new Exception\QueueNotFoundException('Queue does not exist:' . $queue->getName());
-        }
+        $this->_cleanMessageInfo($queue, $message);
 
         $msg = array(
             'queue_id' => $this->getQueueId($queue->getName()),
             'created'  => time(),
-            'body' => $message,
-            'md5' => md5($message)
+            'class'    => get_class($message),
+            'content'  => (string) $message->getContent(),
+            'metadata' => serialize($message->getMetadata()),
+            'md5'      => md5($message->toString())
         );
-        // $msg->timeout = ??? @TODO
+
+        if ($params) {
+            if ($params->getSchedule()) {
+                $msg['schedule'] = $params->getSchedule();
+            }
+
+            if ($params->getInterval()) {
+                $msg['interval'] = $params->getInterval();
+            }
+        }
 
         try {
-            $this->messageTable->insert($msg);
+            $id = $this->messageTable->insert($msg);
         } catch (\Exception $e) {
             throw new Exception\RuntimeException($e->getMessage(), $e->getCode(), $e);
         }
 
-        $options = array(
-            'queue' => $queue,
-            'data'  => $msg,
-        );
-        $classname = $queue->getMessageClass();
-        return new $classname($options);
+        $this->_embedMessageInfo($queue, $message, $id, $params);
+
+        return true;
     }
 
     /**
      * Get messages in the queue
      *
-     * @param  integer    $maxMessages  Maximum number of messages to return
-     * @param  integer    $timeout      Visibility timeout for these messages
      * @param  Queue $queue
+     * @param  integer|null $maxMessages Maximum number of messages to return
+     * @param  ReceiveParameters $params
      * @return Message\MessageIterator
      * @throws Exception\RuntimeException - database error
      */
-    public function receive($maxMessages = null, $timeout = null, Queue $queue = null)
+    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
     {
         if ($maxMessages === null) {
             $maxMessages = 1;
         }
-        if ($timeout === null) {
-            $timeout = self::RECEIVE_TIMEOUT_DEFAULT;
-        }
-        if ($queue === null) {
-            $queue = $this->_queue;
-        }
 
+        $timeout   = $params ? $params->getTimeout() : null;
+        $class     = $params ? $params->getMessageClass() : null;
         $msgs      = array();
         $name      = $this->messageTable->table;
-        $microtime = microtime(true); // cache microtime
+        $microtime = (int) microtime(true); // cache microtime
         $db        = $this->messageTable->getAdapter();
         $connection = $db->getDriver()->getConnection();
+
 
         // start transaction handling
         try {
@@ -350,27 +331,50 @@ class Db extends AbstractAdapter
                 $sql = new Sql($this->adapter);
                 $select = $sql->select();
                 $select->from($name);
-                $select->where(array('queue_id' => $this->getQueueId($queue->getName())));
-                $select->where('(handle IS NULL OR timeout+' . (int)$timeout . ' < ' . (int)$microtime.')');
+
+                $where = array(
+                    'queue_id'                             => $this->getQueueId($queue->getName()),
+                    '(schedule IS NULL or schedule < ?)'   => $microtime,
+                    $timeout ? '(handle IS NULL OR timeout+' . $timeout . ' < ' . $microtime.')' : 'handle IS NULL',
+                );
+
+                if ($class) {
+                    $where['class'] = (string) $class;
+                }
+
+                $select->where($where);
                 $select->limit($maxMessages);
-                 
+
                 $statement = $sql->prepareStatementForSqlObject($select);
                 $result = $statement->execute();
-                
+
                 foreach($result as $message) {
-                    
-                    $update = $sql->update('message');
+
+                    $update = $sql->update($name);
                     $update->where(array('message_id' => $message['message_id']));
-                    $update->where('(handle IS NULL OR timeout+' . (int)$timeout . ' < ' . (int)$microtime.')');
+                    $update->where($where);
                     $message['handle'] = md5(uniqid(rand(), true));
                     $message['timeout'] = $microtime;
                     $update->set(array('handle' => $message['handle'], 'timeout' => $microtime));
                     $stmt = $sql->prepareStatementForSqlObject($update);
                     $rst = $stmt->execute();
                     if ($rst->count() > 0) {
+                        $message['metadata'] = isset($message['metadata']) ? unserialize($message['metadata']) : array();
+                        $message['metadata'][$queue->getOptions()->getMessageMetadatumKey()] = $this->_buildMessageInfo(
+                            (int) $message['message_id'],
+                            $queue,
+                            array(
+                                'timeout'     => $message['timeout'],
+                                'schedule'    => $message['schedule'],
+                                'interval'    => $message['interval'],
+                            )
+                        );
+                        unset($message['id'], $message['timeout'], $message['schedule'], $message['interval']);
+
+
                         $msgs[] = $message;
                     }
-                    
+
                 }
                 $connection->commit();
             }
@@ -379,62 +383,36 @@ class Db extends AbstractAdapter
             throw $e;
         }
 
-        $options = array(
-            'queue'        => $queue,
-            'data'         => $msgs,
-            'messageClass' => $queue->getMessageClass(),
-        );
-        $classname = $queue->getMessageSetClass();
-        return new $classname($options);
-        
+
+        $classname = $queue->getOptions()->getMessageSetClass();
+        return new $classname($msgs, $queue);
     }
+
 
     /**
      * Delete a message from the queue
      *
-     * Returns true if the message is deleted, false if the deletion is
+     * Return true if the message is deleted, false if the deletion is
      * unsuccessful.
      *
+     * @param  Queue $queue
      * @param  Message $message
      * @return boolean
      */
-    public function deleteMessage(Message $message)
+    public function deleteMessage(Queue $queue, Message $message)
     {
-        $data = $message->toArray();
-        $db    = $this->messageTable->delete(array('handle' => $data['handle']));
+        $info = $this->_extractMessageInfo($queue, $message);
 
-        if ($db) {
-            return true;
+        if (isset($info['messageId'])) {
+            $db    = $this->messageTable->delete(array('message_id' => $info['messageId'], 'queue_id' => $this->getQueueId($queue->getName())));
+            if ($db) {
+                return true;
+            }
         }
         return false;
     }
 
-    /********************************************************************
-     * Supporting functions
-     *********************************************************************/
 
-    /**
-     * Return a list of queue capabilities functions
-     *
-     * $array['function name'] = true or false
-     * true is supported, false is not supported.
-     *
-     * @param  string $name
-     * @return array
-     */
-    public function getCapabilities()
-    {
-        return array(
-            'create'        => true,
-            'delete'        => true,
-            'send'          => true,
-            'receive'       => true,
-            'deleteMessage' => true,
-            'getQueues'     => true,
-            'count'         => true,
-            'isExists'      => true,
-        );
-    }
 
     /********************************************************************
      * Functions that are not part of the \ZendQueue\Adapter\AdapterAbstract
@@ -458,11 +436,14 @@ class Db extends AbstractAdapter
         foreach($result as $one) {
             $this->_queues[$name] = (int)$one['queue_id'];
         }
-        
+
         if (!array_key_exists($name, $this->_queues)) {
             throw new Exception\QueueNotFoundException('Queue does not exist: ' . $name);
         }
 
         return $this->_queues[$name];
     }
+
+
+
 }

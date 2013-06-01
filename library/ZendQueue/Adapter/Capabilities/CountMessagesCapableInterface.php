@@ -8,12 +8,17 @@
  * @package   Zend_Queue
  */
 
-namespace ZendQueue\Exception;
+namespace ZendQueue\Adapter\Capabilities;
 
-/**
- * Exception for Zend_Queue component.
- *
- */
-class InvalidArgumentException extends \InvalidArgumentException implements
-    ExceptionInterface
-{}
+use ZendQueue\Adapter\AdapterInterface;
+use ZendQueue\Queue;
+
+interface CountMessagesCapableInterface extends AdapterInterface
+{
+    /**
+     * Returns the approximate number of messages in the queue
+     *
+     * @return integer|null
+     */
+    public function countMessages(Queue $queue);
+}

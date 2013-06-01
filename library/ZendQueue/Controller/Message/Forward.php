@@ -8,12 +8,11 @@
  * @package   Zend_Queue
  */
 
-namespace ZendQueue\Exception;
+namespace ZendQueue\Controller\Message;
 
-/**
- * Exception for Zend_Queue component.
- *
- */
-class InvalidArgumentException extends \InvalidArgumentException implements
-    ExceptionInterface
-{}
+use ZendQueue\Message\Message as QueueMessage;
+
+class Forward extends QueueMessage
+{
+
+}

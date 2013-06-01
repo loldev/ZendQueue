@@ -11,29 +11,19 @@
 namespace ZendQueue\Adapter;
 
 use Traversable;
+use Zend\Stdlib\ArrayUtils;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
-use Zend\Stdlib\ArrayUtils;
+use Zend\Stdlib\Message;
+use Zend\Stdlib\ParameterObjectInterface;
+use Zend\Stdlib\Parameters;
 
 /**
  * Class for connecting to queues performing common operations.
  *
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Adapter
  */
 abstract class AbstractAdapter implements AdapterInterface
 {
-    /**
-     * Default timeout for createQueue() function
-     */
-    const CREATE_TIMEOUT_DEFAULT = 30;
-
-    /**
-     * Default timeout for receive() function
-     */
-    const RECEIVE_TIMEOUT_DEFAULT = 30;
-
     /**
      * User-provided options
      *
@@ -49,35 +39,15 @@ abstract class AbstractAdapter implements AdapterInterface
     protected $_queues = array();
 
     /**
-     * Contains the Queue that this object
-     *
-     * @var Queue
-     */
-    protected $_queue = null;
-
-    /**
      * Constructor.
      *
-     * $options is an array of key/value pairs or an instance of Zend_Config
+     * $options is an array of key/value pairs or an instance of Traversable
      * containing configuration options.  These options are common to most adapters:
      *
-     * See the Zend_Queue Adapter Notes documentation for example configurations.
-     *
-     * Some options are used on a case-by-case basis by adapters:
-     *
-     * access_key     => (string) Amazon AWS Access Key
-     * secret_key     => (string) Amazon AWS Secret Key
-     * dbname         => (string) The name of the database to user
-     * username       => (string) Connect to the database as this username.
-     * password       => (string) Password associated with the username.
-     * host           => (string) What host to connect to, defaults to localhost
-     * port           => (string) The port of the database
-     *
      * @param  array|Traversable $options An array having configuration data
-     * @param  Queue The Queue object that created this class
      * @throws Exception\InvalidArgumentException
      */
-    public function __construct($options, Queue $queue = null)
+    public function __construct($options)
     {
         if ($options instanceof Traversable) {
             $options = ArrayUtils::iteratorToArray($options);
@@ -87,13 +57,9 @@ abstract class AbstractAdapter implements AdapterInterface
          * Verify that adapter parameters are in an array.
          */
         if (!is_array($options)) {
-            throw new Exception\InvalidArgumentException('Adapter options must be an array or Zend_Config object');
+            throw new Exception\InvalidArgumentException('Adapter options must be an array or Traversable object');
         }
 
-        // set the queue
-        if ($queue !== null) {
-            $this->setQueue($queue);
-        }
 
         $adapterOptions = array();
         $driverOptions  = array();
@@ -118,31 +84,36 @@ abstract class AbstractAdapter implements AdapterInterface
         $this->_options = array_merge($this->_options, $options);
         $this->_options['options']       = $adapterOptions;
         $this->_options['driverOptions'] = $driverOptions;
+
     }
 
-    /********************************************************************
-    * Queue management functions
-     *********************************************************************/
-    /**
-     * get the Zend_Queue class that is attached to this object
-     *
-     * @return Queue|null
-     */
-    public function getQueue()
+    protected function _buildMessageInfo($id, $queue, $options = null)
     {
-        return $this->_queue;
+        return array(
+            'messageId' => $id,
+            'queue'     => $queue instanceof Queue ? $queue->getName() : (string) $queue,
+            'adapter'   => get_class($this),
+            'options'   => $options instanceof Parameters ? $options->toArray() : (array) $options,
+        );
     }
 
-    /**
-     * set the Zend_Queue class for this object
-     *
-     * @param  Queue $queue
-     * @return AbstractAdapter
-     */
-    public function setQueue(Queue $queue)
+
+    protected function _embedMessageInfo(Queue $queue, Message $message, $id, $options = null)
     {
-        $this->_queue = $queue;
-        return $this;
+        $message->setMetadata($queue->getOptions()->getMessageMetadatumKey(), $this->_buildMessageInfo($id, $queue, $options));
+    }
+
+    protected function _extractMessageInfo(Queue $queue, Message $message)
+    {
+       return $message->getMetadata($queue->getOptions()->getMessageMetadatumKey());
+    }
+
+    protected function _cleanMessageInfo(Queue $queue, Message $message)
+    {
+        $metadatumKey = $queue->getOptions()->getMessageMetadatumKey();
+        if ($message->getMetadata($metadatumKey, null)) {
+            $message->setMetadata($metadatumKey, null);
+        }
     }
 
     /**
@@ -155,16 +126,14 @@ abstract class AbstractAdapter implements AdapterInterface
         return $this->_options;
     }
 
-    /**
-     * Indicates if a function is supported or not.
-     *
-     * @param  string $name
-     * @return boolean
-     */
-    public function isSupported($name)
+    public function getAvailableReceiveParams()
     {
-        $list = $this->getCapabilities();
+        return array();
+    }
 
-        return (isset($list[$name]) && $list[$name]);
-     }
+    public function getAvailableSendParams()
+    {
+        return array();
+    }
+
 }

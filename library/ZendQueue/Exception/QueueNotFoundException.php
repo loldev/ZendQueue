@@ -13,8 +13,6 @@ namespace ZendQueue\Exception;
 /**
  * This Exception will throw, when queue not found
  *
- * @category   Zend
- * @package    Zend_Queue
  */
 class QueueNotFoundException extends RuntimeException
 {

@@ -12,9 +12,6 @@ namespace ZendQueue\Exception;
 
 /**
  * This Exception will throw, when connection is not good.
- *
- * @category   Zend
- * @package    Zend_Queue
  */
 class ConnectionException extends RuntimeException
 {}

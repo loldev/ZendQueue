@@ -10,132 +10,101 @@
 
 namespace ZendQueue\Adapter;
 
-use ZendQueue\Exception;
-use ZendQueue\Message;
+use Zend\Stdlib\Message;
 use ZendQueue\Queue;
+use ZendQueue\Exception;
 
 /**
- * Class testing.  No supported functions.  Also used to disable a Zend_Queue.
+ * Class testing.  No supported functions.  Also used to disable a queue.
  *
- * @category   Zend
- * @package    Zend_Queue
- * @subpackage Adapter
  */
 class Null extends AbstractAdapter
 {
-    /********************************************************************
-     * Queue management functions
-     *********************************************************************/
+
+    /**
+     * Ensure connection
+     *
+     * @return bool
+     */
+    public function connect()
+    {
+        return true;
+    }
 
     /**
      * Does a queue already exist?
      *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
+     * @param  string $name Queue name
+     * @return boolean
+    */
     public function isExists($name)
     {
-        throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
+        return false;
     }
-
 
     /**
      * Create a new queue
      *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
-    public function create($name, $timeout=null)
+     * Visibility timeout is how long a message is left in the queue
+     * "invisible" to other readers.  If the message is acknowleged (deleted)
+     * before the timeout, then the message is deleted.  However, if the
+     * timeout expires then the message will be made available to other queue
+     * readers.
+     *
+     * @param  string  $name Queue name
+     * @param  integer $timeout Default visibility timeout
+     * @return boolean
+    */
+    public function create($name)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
 
     /**
-     * Delete a queue and all of it's messages
+     * Delete a queue and all of its messages
      *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
+     * Return false if the queue is not found, true if the queue exists.
+     *
+     * @param  string $name Queue name
+     * @return boolean
+    */
     public function delete($name)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
 
-    /**
-     * Get an array of all available queues
-     *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
-    public function getQueues()
-    {
-        throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
-    }
-
-    /**
-     * Return the approximate number of messages in the queue
-     *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
-    public function count(Queue $queue=null)
-    {
-        throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
-    }
 
     /********************************************************************
      * Messsage management functions
-     *********************************************************************/
+    *********************************************************************/
 
     /**
      * Send a message to the queue
      *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
-    public function send($message, Queue $queue=null)
+     * @param  Queue $queue
+     * @param  Message $message Message to send to the active queue
+     * @param  SendParameters $params
+     * @return bool
+     * @throws Exception\QueueNotFoundException
+     * @throws Exception\RuntimeException
+    */
+    public function send(Queue $queue, Message $message, SendParameters $params = null)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
 
     /**
-     * Get messages in the queue
+     * Get messages from the queue
      *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
-    public function receive($maxMessages=null, $timeout=null, Queue $queue=null)
+     * @param  Queue $queue
+     * @param  integer|null $maxMessages Maximum number of messages to return
+     * @param  ReceiveParameters $params
+     * @return MessageIterator
+    */
+    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
 
-    /**
-     * Delete a message from the queue
-     *
-     * @throws Exception\UnsupportedMethodCallException - not supported.
-     */
-    public function deleteMessage(Message $message)
-    {
-        throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
-    }
 
-    /********************************************************************
-     * Supporting functions
-     *********************************************************************/
-
-    /**
-     * Return a list of queue capabilities functions
-     *
-     * $array['function name'] = true or false
-     * true is supported, false is not supported.
-     *
-     * @param  string $name
-     * @return array
-     */
-    public function getCapabilities()
-    {
-        return array(
-            'create'        => false,
-            'delete'        => false,
-            'send'          => false,
-            'receive'       => false,
-            'deleteMessage' => false,
-            'getQueues'     => false,
-            'count'         => false,
-            'isExists'      => false,
-        );
-    }
 }
