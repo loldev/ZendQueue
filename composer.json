@@ -1,5 +1,5 @@
 {
-    "name": "zendframework/zend-queue",
+    "name": "loldev/zend-queue",
     "description": "provides a factory function to create specific queue client objects",
     "type": "library",
     "license": "BSD-3-Clause",
