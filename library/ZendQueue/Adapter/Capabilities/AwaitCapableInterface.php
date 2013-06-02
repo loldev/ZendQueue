@@ -12,6 +12,7 @@ namespace ZendQueue\Adapter\Capabilities;
 
 use ZendQueue\Adapter\AdapterInterface;
 use ZendQueue\Parameter\ReceiveParameters;
+use ZendQueue\Queue;
 
 interface AwaitCapableInterface extends AdapterInterface
 {
