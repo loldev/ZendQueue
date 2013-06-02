@@ -22,7 +22,7 @@
 	"require": {
         "php": ">=5.3.3",
         "zendframework/zendframework": ">2.2.0rc1"
-    }
+    },
     "suggest": {
         "zendframework/zend-db": "Zend\\Db required if you are using the DB queue adapter"
     }
