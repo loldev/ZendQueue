@@ -1,2 +1,13 @@
+# Vendor
 vendor/
+
+# Composer
 composer.lock
+
+# OSX
+.DS_store
+
+# Ecplise-based IDEs
+.project
+.buildpath
+.settings

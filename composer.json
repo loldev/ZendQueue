@@ -1,13 +1,13 @@
 {
     "name": "loldev/zend-queue",
-    "description": "provides a factory function to create specific queue client objects",
+    "description": "Provides a factory function to create specific queue client objects",
     "type": "library",
     "license": "BSD-3-Clause",
     "keywords": [
         "zf2",
         "queue"
     ],
-    "homepage": "http://packages.zendframework.com/",
+    "homepage": "https://github.com/loldev/ZendQueue",
     "autoload": {
         "psr-0": {
             "ZendQueue": "library/"
@@ -19,9 +19,12 @@
             "url": "http://packages.zendframework.com/"
         }
     ],
-	"require": {
+    "require-dev": {
+        "phpunit/phpunit": "3.7.*"
+    },
+    "require": {
         "php": ">=5.3.3",
-        "zendframework/zendframework": ">2.2.0rc1"
+        "zendframework/zendframework": "2.2.*"
     },
     "suggest": {
         "zendframework/zend-db": "Zend\\Db required if you are using the DB queue adapter"
