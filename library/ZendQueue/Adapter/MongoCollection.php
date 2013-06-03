@@ -10,10 +10,6 @@
 
 namespace ZendQueue\Adapter;
 
-use Mongo;
-use MongoDB;
-use MongoCollection;
-use MongoId;
 use Zend\Stdlib\Message;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
