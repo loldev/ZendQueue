@@ -13,6 +13,10 @@ namespace ZendQueue\Adapter;
 use ZendQueue\Exception;
 use ZendQueue\Message;
 use ZendQueue\Queue;
+use ZendQueue\Parameter\SendParameters;
+use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
+use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
+use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
 
 /**
  * Class for using a standard PHP array as a queue
@@ -21,7 +25,7 @@ use ZendQueue\Queue;
  * @package    Zend_Queue
  * @subpackage Adapter
  */
-class ArrayAdapter extends AbstractAdapter
+class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterface, ListQueuesCapableInterface, CountMessagesCapableInterface
 {
     /**
      * @var array
@@ -34,13 +38,21 @@ class ArrayAdapter extends AbstractAdapter
      *********************************************************************/
 
     /**
+     * Ensure connection
+     * 
+     * Dummy method - ArrayAdapter needs no connection
+     *
+     * @return boolean
+     */
+    public function connect()
+    {
+    	return true;
+    }
+    
+    /**
      * Does a queue already exist?
      *
-     * Throws an exception if the adapter cannot determine if a queue exists.
-     * use isSupported('isExists') to determine if an adapter can test for
-     * queue existance.
-     *
-     * @param  string $name
+     * @param string $name
      * @return boolean
      */
     public function isExists($name)
@@ -51,22 +63,13 @@ class ArrayAdapter extends AbstractAdapter
     /**
      * Create a new queue
      *
-     * Visibility timeout is how long a message is left in the queue "invisible"
-     * to other readers.  If the message is acknowleged (deleted) before the
-     * timeout, then the message is deleted.  However, if the timeout expires
-     * then the message will be made available to other queue readers.
-     *
-     * @param  string  $name    queue name
-     * @param  integer $timeout default visibility timeout
+     * @param string $name queue name
      * @return boolean
      */
     public function create($name, $timeout=null)
     {
         if ($this->isExists($name)) {
             return false;
-        }
-        if ($timeout === null) {
-            $timeout = self::CREATE_TIMEOUT_DEFAULT;
         }
         $this->_data[$name] = array();
 
@@ -78,7 +81,7 @@ class ArrayAdapter extends AbstractAdapter
      *
      * Returns false if the queue is not found, true if the queue exists
      *
-     * @param  string  $name queue name
+     * @param string $name queue name
      * @return boolean
      */
     public function delete($name)
@@ -108,16 +111,12 @@ class ArrayAdapter extends AbstractAdapter
     /**
      * Return the approximate number of messages in the queue
      *
-     * @param  Queue $queue
+     * @param Queue $queue
      * @return integer
      * @throws Exception\QueueNotFoundException
      */
-    public function count(Queue $queue=null)
+    public function count(Queue $queue)
     {
-        if ($queue === null) {
-            $queue = $this->_queue;
-        }
-
         if (!isset($this->_data[$queue->getName()])) {
             throw new Exception\QueueNotFoundException('Queue does not exist');
         }
@@ -128,42 +127,41 @@ class ArrayAdapter extends AbstractAdapter
     /********************************************************************
     * Messsage management functions
      *********************************************************************/
-
+    
     /**
      * Send a message to the queue
      *
-     * @param  string     $message Message to send to the active queue
-     * @param  Queue $queue
+     * @param Queue $queue
+     * @param string $message
+     * @param SendParameters $params
      * @return Message
      * @throws Exception\QueueNotFoundException
      */
-    public function send($message, Queue $queue=null)
+    public function send(Queue $queue, Message $message, SendParameters $params = null)
     {
-        if ($queue === null) {
-            $queue = $this->_queue;
-        }
-
         if (!$this->isExists($queue->getName())) {
             throw new Exception\QueueNotFoundException('Queue does not exist:' . $queue->getName());
         }
 
-        // create the message
-        $data = array(
-            'message_id' => md5(uniqid(rand(), true)),
-            'body'       => $message,
-            'md5'        => md5($message),
-            'handle'     => null,
-            'created'    => time(),
-            'queue_name' => $queue->getName(),
+        $this->_cleanMessageInfo($queue, $message);
+        
+        $msg = array(
+            'created'  => time(),
+            'class'    => get_class($queue),
+            'content'  => (string) $message->getContent(),
+            'metadata' => $message->getMetadata()
         );
 
-        // add $data to the "queue"
-        $this->_data[$queue->getName()][] = $data;
+        $messageId = microtime(true);
+        $this->_data[$queue->getName()][$messageId] = $data;
 
         $options = array(
             'queue' => $queue,
             'data'  => $data,
         );
+        
+        $this->_embedMessageInfo($queue, $message, $messageId, $params);
+        
         $classname = $queue->getMessageClass();
         return new $classname($options);
     }
@@ -171,125 +169,97 @@ class ArrayAdapter extends AbstractAdapter
     /**
      * Get messages in the queue
      *
-     * @param  integer    $maxMessages  Maximum number of messages to return
-     * @param  integer    $timeout      Visibility timeout for these messages
-     * @param  Queue $queue
+     * @param Queue $queue
+     * @param integer $maxMessages Maximum number of messages to return
+     * @param ReceiveParameters $params
      * @return Message\MessageIterator
      */
-    public function receive($maxMessages = null, $timeout = null, Queue $queue = null)
+    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
     {
         if ($maxMessages === null) {
             $maxMessages = 1;
         }
-        if ($timeout === null) {
-            $timeout = self::RECEIVE_TIMEOUT_DEFAULT;
-        }
-        if ($queue === null) {
-            $queue = $this->_queue;
-        }
 
-        $data       = array();
+        $data = array();
         if ($maxMessages > 0) {
             $start_time = microtime(true);
 
             $count = 0;
             $temp = &$this->_data[$queue->getName()];
-            foreach ($temp as $key=>&$msg) {
-                // count check has to be first, as someone can ask for 0 messages
-                // ZF-7650
-                if ($count >= $maxMessages) {
-                    break;
-                }
+            foreach ($temp as $messageId => &$msg) {
 
-                if (($msg['handle'] === null)
-                    || ($msg['timeout'] + $timeout < $start_time)
-                ) {
+                if (($msg['handle'] === null)) {
                     $msg['handle']  = md5(uniqid(rand(), true));
                     $msg['timeout'] = microtime(true);
                     $data[] = $msg;
-                    $count++;
+                    ++$count;
                 }
+                
+                $message['metadata'][$queue->getOptions()->getMessageMetadatumKey()] = $this->_buildMessageInfo(
+            		$messageId,
+            		$queue
+                );
 
+                if ($count >= $maxMessages) {
+                	break;
+                }
             }
         }
 
         $options = array(
             'queue'        => $queue,
             'data'         => $data,
-            'messageClass' => $queue->getMessageClass(),
         );
-        $classname = $queue->getMessageSetClass();
+        
+        $classname = $queue->getOptions()->getMessageSetClass();
         return new $classname($options);
     }
 
     /**
      * Delete a message from the queue
      *
-     * Returns true if the message is deleted, false if the deletion is
-     * unsuccessful.
+     * Returns true if the message is deleted, false if the deletion is unsuccessful.
      *
+     * @param Queue $queue
      * @param  Message $message
      * @return boolean
      * @throws Exception\ExceptionInterface
      */
-    public function deleteMessage(Message $message)
+    public function deleteMessage(Queue $queue, Message $message)
     {
-        // load the queue
-        $queue = &$this->_data[$message->queue_name];
-
-        foreach ($queue as $key => &$msg) {
-            if ($msg['handle'] == $message->handle) {
-                unset($queue[$key]);
-                return true;
-            }
+        if (!$this->isExists($queue->getName())) {
+        	throw new Exception\QueueNotFoundException('Queue does not exist:' . $queue->getName());
         }
+        
+        // load the queue
+        $queue = &$this->_data[$queue->getName()];
 
-        return false;
-    }
-
-    /********************************************************************
-     * Supporting functions
-     *********************************************************************/
-
-    /**
-     * Return a list of queue capabilities functions
-     *
-     * $array['function name'] = true or false
-     * true is supported, false is not supported.
-     *
-     * @param  string $name
-     * @return array
-     */
-    public function getCapabilities()
-    {
-        return array(
-            'create'        => true,
-            'delete'        => true,
-            'send'          => true,
-            'receive'       => true,
-            'deleteMessage' => true,
-            'getQueues'     => true,
-            'count'         => true,
-            'isExists'      => true,
-        );
+        if ( $queue[$messageId] === null ){
+            return false;
+        }
+        
+        unset($queue[$messageId]);
+        
+        return true;
     }
 
     /********************************************************************
     * Functions that are not part of the \ZendQueue\Adapter\AdapterAbstract
      *********************************************************************/
 
+    //FIXME
     /**
      * serialize
      */
     public function __sleep()
     {
-        return array('_data');
+    	return array('_data');
     }
-
+    
     /*
      * These functions are debug helpers.
-     */
-
+    */
+    
     /**
      * returns underlying _data array
      * $queue->getAdapter()->getData();
@@ -298,9 +268,9 @@ class ArrayAdapter extends AbstractAdapter
      */
     public function getData()
     {
-        return $this->_data;
+    	return $this->_data;
     }
-
+    
     /**
      * sets the underlying _data array
      * $queue->getAdapter()->setData($data);
@@ -310,7 +280,7 @@ class ArrayAdapter extends AbstractAdapter
      */
     public function setData($data)
     {
-        $this->_data = $data;
-        return $this;
+    	$this->_data = $data;
+    	return $this;
     }
 }
