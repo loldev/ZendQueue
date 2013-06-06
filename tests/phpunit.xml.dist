@@ -1,31 +1,31 @@
-<phpunit bootstrap="./Bootstrap.php" colors="true">
+<phpunit bootstrap="Bootstrap.php" colors="true">
     <testsuites>
         <testsuite name="ZendQueue Test Suite">
-            <directory>./ZendQueue</directory>
+            <directory>ZendQueue/</directory>
             
-            <exclude>./ZendQueue/Adapter/ActivemqTest.php</exclude>
-            <exclude>./ZendQueue/Adapter/AdapterTest.php</exclude>
-            <exclude>./ZendQueue/Adapter/ArrayTest.php</exclude>
-            <exclude>./ZendQueue/Adapter/DBTest.php</exclude>
-            <exclude>./ZendQueue/Adapter/MemcacheqTest.php</exclude>
-            <exclude>./ZendQueue/Adapter/NullTest.php</exclude>
-            <exclude>./ZendQueue/Adapter/PlatformJobQueueTest.php</exclude>
+            <exclude>Adapter/ActivemqTest.php</exclude>
+            <exclude>Adapter/AdapterTest.php</exclude>
+            <exclude>Adapter/ArrayTest.php</exclude>	
+            <exclude>Adapter/DBTest.php</exclude>
+            <exclude>Adapter/MemcacheqTest.php</exclude>
+            <exclude>Adapter/NullTest.php</exclude>
+            <exclude>Adapter/PlatformJobQueueTest.php</exclude>
             
-            <exclude>./ZendQueue/Bugs/ZF-7650Test.php</exclude>
+            <exclude>Bugs/ZF-7650Test.php</exclude>
             
-            <exclude>./ZendQueue/Message/IteratorTest.php</exclude>
+            <exclude>Message/IteratorTest.php</exclude>
             
-            <exclude>./ZendQueue/Stomp/ClientTest.php</exclude>
-            <exclude>./ZendQueue/Stomp/ConnectionTest.php</exclude>
-            <exclude>./ZendQueue/Stomp/FrameTest.php</exclude>
+            <exclude>Stomp/ClientTest.php</exclude>
+            <exclude>Stomp/ConnectionTest.php</exclude>
+            <exclude>Stomp/FrameTest.php</exclude>
             
-            <exclude>./ZendQueue/CustomTest.php</exclude>
-            <exclude>./ZendQueue/FactoryTest.php</exclude>
-            <exclude>./ZendQueue/MessageTest.php</exclude>
-            <exclude>./ZendQueue/Queue1Test.php</exclude>
-            <exclude>./ZendQueue/Queue2Test.php</exclude>
-            <exclude>./ZendQueue/QueueBaseTest.php</exclude>
-            <exclude>./ZendQueue/QueueTest.php</exclude>
+            <exclude>CustomTest.php</exclude>
+            <exclude>FactoryTest.php</exclude>
+            <exclude>MessageTest.php</exclude>
+            <exclude>Queue1Test.php</exclude>
+            <exclude>Queue2Test.php</exclude>
+            <exclude>QueueBaseTest.php</exclude>
+            <exclude>QueueTest.php</exclude>
             
         </testsuite>
     </testsuites>
