@@ -13,6 +13,8 @@ namespace ZendQueue\Adapter;
 use Zend\Stdlib\Message;
 use ZendQueue\Queue;
 use ZendQueue\Exception;
+use ZendQueue\Parameter\SendParameters;
+use ZendQueue\Parameter\ReceiveParameters;
 
 /**
  * Class testing.  No supported functions.  Also used to disable a queue.

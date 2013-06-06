@@ -13,7 +13,7 @@ namespace ZendQueue\Adapter;
 use Memcache;
 use Traversable;
 use ZendQueue\Exception;
-use ZendQueue\Message;
+use ZendQueue\Message\Message;
 use ZendQueue\Queue;
 
 /**

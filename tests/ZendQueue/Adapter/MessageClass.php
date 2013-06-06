@@ -16,6 +16,6 @@ namespace ZendQueueTest\Adapter;
  * @subpackage UnitTests
  * @group      Zend_Queue
  */
-class MessageClass extends \ZendQueue\Message
+class MessageClass extends \ZendQueue\Message\Message
 {
 }

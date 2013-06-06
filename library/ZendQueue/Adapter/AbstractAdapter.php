@@ -14,7 +14,7 @@ use Traversable;
 use Zend\Stdlib\ArrayUtils;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
-use Zend\Stdlib\Message;
+use ZendQueue\Message\Message;
 use Zend\Stdlib\ParameterObjectInterface;
 use Zend\Stdlib\Parameters;
 
