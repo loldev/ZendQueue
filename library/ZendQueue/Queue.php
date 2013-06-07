@@ -27,6 +27,7 @@ use ZendQueue\Adapter\Capabilities\VisibilityTimeoutCapableInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\Event;
 use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
+use ZendQueue\Adapter\Null;
 
 /**
  *
@@ -146,6 +147,10 @@ class Queue implements Countable
         }
 
         $this->adapter = $adapter;
+        
+        if (! ($this->adapter instanceof Null)) {
+            $this->adapter->create($this->getName());
+        }
 
         return $this;
     }
@@ -234,7 +239,7 @@ class Queue implements Countable
      */
     public function send($message, SendParameters $params = null)
     {
-        if (!($message instanceof \Zend\Stdlib\Message)) {
+        if (!($message instanceof Message)) {
             $data = $message;
             $messageClass = $this->getOptions()->getMessageClass();
             if (is_string($data)) {

@@ -4,8 +4,7 @@
             <directory>ZendQueue/</directory>
             
             <exclude>Adapter/ActivemqTest.php</exclude>
-            <exclude>Adapter/AdapterTest.php</exclude>
-            <exclude>Adapter/ArrayTest.php</exclude>	
+<!--            <exclude>Adapter/ArrayTest.php</exclude>	-->	
             <exclude>Adapter/DBTest.php</exclude>
             <exclude>Adapter/MemcacheqTest.php</exclude>
             <exclude>Adapter/NullTest.php</exclude>

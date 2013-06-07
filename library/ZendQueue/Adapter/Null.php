@@ -47,14 +47,7 @@ class Null extends AbstractAdapter
     /**
      * Create a new queue
      *
-     * Visibility timeout is how long a message is left in the queue
-     * "invisible" to other readers.  If the message is acknowleged (deleted)
-     * before the timeout, then the message is deleted.  However, if the
-     * timeout expires then the message will be made available to other queue
-     * readers.
-     *
      * @param  string  $name Queue name
-     * @param  integer $timeout Default visibility timeout
      * @return boolean
     */
     public function create($name)
