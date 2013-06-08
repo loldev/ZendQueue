@@ -6,7 +6,7 @@
             <exclude>Adapter/ActivemqTest.php</exclude>
 <!--            <exclude>Adapter/ArrayTest.php</exclude>	-->	
             <exclude>Adapter/DBTest.php</exclude>
-            <exclude>Adapter/NullTest.php</exclude>
+<!--            <exclude>Adapter/NullTest.php</exclude>		-->
             
             <exclude>Bugs/ZF-7650Test.php</exclude>
             

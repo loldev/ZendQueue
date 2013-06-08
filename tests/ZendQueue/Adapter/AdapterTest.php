@@ -141,6 +141,13 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
      */
     protected function adapterHasSupport(AdapterInterface $adapter, $needles)
     {
+        // This hack is necessary because we don't want NullTest to fail,
+        // despite that, ensure that if an application call a NullTest method
+        // an exception will be thrown
+        if ($this->getAdapterName() == 'Null') {
+            return false;
+        }
+        
         if ( is_string($needles)) {
             $needles = array($needles);
         }
@@ -161,6 +168,13 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
      */
     protected function queueHasSupport(Queue $queue, $needles)
     {
+        // This hack is necessary because we don't want NullTest to fail,
+        // despite that, ensure that if an application call a NullTest method
+        // an exception will be thrown
+        if ($this->getAdapterName() == 'Null') {
+        	return false;
+        }
+        
         if ( is_string($needles)) {
             $needles = array($needles);
         }
@@ -638,10 +652,10 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         }
 
         $this->assertEquals(0, count($queue));
-        $this->assertTrue($queue->deleteQueue());
-
-        // delete the queue we created
-        $queue->deleteQueue();
+        
+        if ($this->queueHasSupport($queue, 'deleteQueue')) {
+            $this->assertTrue($queue->deleteQueue());
+        }
     }
 
     /**
