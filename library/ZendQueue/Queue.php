@@ -141,9 +141,13 @@ class Queue implements Countable
             $options = $this->getOptions();
             $adapter = new $adapterName(array('options' => $options->getAdapterOptions(), 'driverOptions' => $options->getDriverOptions() ));
         }
-
+        
+        if (($type = gettype($adapter)) != 'object') {
+            throw new Exception\InvalidArgumentException('$adapter must be a string or an object implementing \ZendQueue\Adapter\AdapterInterface. '.$type.' given.');
+        }
+        
         if (!$adapter instanceof AdapterInterface) {
-            throw new Exception\InvalidArgumentException('Adapter class \'' . get_class($adapterName) . '\' does not implement \ZendQueue\Adapter\AdapterInterface\'');
+            throw new Exception\InvalidArgumentException("Adapter class ".get_class($adapter)." does not implement \ZendQueue\Adapter\AdapterInterface");
         }
 
         $this->adapter = $adapter;
@@ -417,7 +421,7 @@ class Queue implements Countable
 
     public function canAwait()
     {
-        return ($this->getAdapter() instanceof AwaitCapableInterface) || ($this->getOption(self::EMULATE_AWAIT));
+        return ($this->getAdapter() instanceof AwaitCapableInterface);
     }
 
     public function canDeleteMessage()

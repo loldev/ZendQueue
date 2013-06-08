@@ -11,11 +11,13 @@
 namespace ZendQueueTest;
 
 use Zend\Config\Config;
-use Zend\Log;
-use Zend\Log\Writer;
 use ZendQueue\Adapter;
-use ZendQueue\Message;
+use ZendQueue\Message\Message;
 use ZendQueue\Queue;
+use ZendQueue\QueueOptions;
+use ZendQueue\Adapter\ArrayAdapter;
+use ZendQueue\Message\MessageIterator;
+use ZendQueue\Parameter\SendParameters;
 
 /*
  * The adapter test class provides a universal test class for all of the
@@ -33,129 +35,97 @@ use ZendQueue\Queue;
  */
 class QueueTest extends \PHPUnit_Framework_TestCase
 {
+    /**
+     * @var string
+     */
+    protected $name;
+    
+    /**
+     * @var ArrayAdapter
+     */
+    protected $adapter;
+    
+    /**
+     * @var QueueOptions
+     */
+    protected $options;
+    
+    /**
+     * @var Queue
+     */
+    protected $queue;
+    
+    
     protected function setUp()
     {
-        // Test Zend_Config
-        $this->config = array(
-            'name'      => 'queue1',
-            'params'    => array(),
-        );
-
-        $this->queue = new Queue('ArrayAdapter', $this->config);
+        $this->name = 'queueTest';
+        
+        $this->options = new QueueOptions();
+        
+        $this->adapter = new ArrayAdapter($this->options->getAdapterOptions());
+        
+        $this->queue = new Queue($this->name, $this->adapter);
     }
 
     protected function tearDown()
     {
+        
     }
 
-    public function testConst()
-    {
-        $this->assertTrue(is_string(Queue::TIMEOUT));
-        $this->assertTrue(is_integer(Queue::VISIBILITY_TIMEOUT));
-        $this->assertTrue(is_string(Queue::NAME));
-    }
-
-    /**
-     * Constructor
-     *
-     * @param string|Zend_Queue_Adapter_Abstract $adapter
-     * @param array  $config
-     */
     public function testConstruct()
     {
-        // Test Zend_Config
-        $config = array(
-            'name'      => 'queue1',
-            'params'    => array(),
-            'adapter'   => 'ArrayAdapter'
-        );
-
-        $zend_config = new Config($config);
-
-        $obj = new Queue($config);
-        $this->assertTrue($obj instanceof Queue);
-
-        $obj = new Queue($zend_config);
+        $obj = new Queue('queueTestConstruct', 'ArrayAdapter');
         $this->assertTrue($obj instanceof Queue);
     }
 
-    public function test_getConfig()
+    public function testGetConfig()
     {
-        $options = $this->queue->getOptions();
-        $this->assertTrue(is_array($options));
-        $this->assertEquals($this->config['name'], $options['name']);
+        $this->assertTrue($this->options instanceof QueueOptions);
+        $this->assertEquals($this->options, $this->queue->getOptions());
+        $this->assertTrue(is_array($this->options->getAdapterOptions()));
     }
 
-    public function test_set_getAdapter()
+    public function testSetGetAdapter()
     {
-        $adapter = new Adapter\ArrayAdapter($this->config);
+        $adapter = new ArrayAdapter($this->options->getAdapterOptions());
         $this->assertTrue($this->queue->setAdapter($adapter) instanceof Queue);
-        $this->assertTrue($this->queue->getAdapter($adapter) instanceof Adapter\ArrayAdapter);
+        $this->assertTrue($this->queue->getAdapter($adapter) instanceof ArrayAdapter);
     }
 
-    public function test_set_getMessageClass()
+    public function testGetName()
     {
-        $class = 'test';
-        $this->assertTrue($this->queue->setMessageClass($class) instanceof Queue);
-        $this->assertEquals($class, $this->queue->getMessageClass());
+        $this->assertEquals($this->name, $this->queue->getName());
     }
 
-    public function test_set_getMessageSetClass()
+    public function testEnsureQueue()
     {
-        $class = 'test';
-        $this->assertTrue($this->queue->setMessageSetClass($class) instanceof Queue);
-        $this->assertEquals($class, $this->queue->getMessageSetClass());
+        $this->assertTrue($this->queue->ensureQueue());
+        $this->assertTrue($this->adapter->isExists($this->name));
     }
 
-    public function test_set_getName()
-    {
-        // $this->assertTrue($this->queue->setName($new) instanceof Zend_Queue);
-        $this->assertEquals($this->config['name'], $this->queue->getName());
-    }
-
-    public function test_create_deleteQueue()
-    {
-        // parameter testing
-        try {
-            $this->queue->createQueue(array());
-            $this->fail('createQueue() $name must be a string');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
-        }
-
-        try {
-            $this->queue->createQueue('test', 'test');
-            $this->fail('createQueue() $timeout must be an integer');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
-        }
-
-        // isExists
-        $queue = 'test';
-        $new = $this->queue->createQueue($queue);
-        $this->assertTrue($new instanceof Queue);
-        $this->assertFalse($this->queue->createQueue($queue));
-
-        $this->assertTrue($new->deleteQueue());
-    }
-
-    public function test_send_count_receive_deleteMessage()
+    public function testSampleBehavior()
     {
         // ------------------------------------ send()
         // parameter verification
         try {
             $this->queue->send(array());
-            $this->fail('send() $mesage must be a string');
+            $this->fail('send() $mesage must be a string or an instance of \ZendQueue\Message\Message');
         } catch (\Exception $e) {
             $this->assertTrue(true);
         }
 
-        $message = 'Hello world'; // never gets boring!
-        $this->assertTrue($this->queue->send($message) instanceof Message);
+        $message = 'Hello world';
+        $this->assertTrue($this->queue->send($message));
+        
+        $message = new Message();
+        $message->setContent('Hello world again');
+        $this->assertTrue($this->queue->send($message));
 
         // ------------------------------------ count()
-        $this->assertEquals($this->queue->count(), 1);
-
+        if ($this->queue->canCountMessages()) {
+            $this->assertEquals($this->queue->count(), 2);
+        }
+        
         // ------------------------------------ receive()
         // parameter verification
         try {
@@ -165,75 +135,52 @@ class QueueTest extends \PHPUnit_Framework_TestCase
             $this->assertTrue(true);
         }
 
-        try {
-            $this->queue->receive(1, array());
-            $this->fail('receive() $timeout must be a integer or null');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
-        }
-
         $messages = $this->queue->receive();
-        $this->assertTrue($messages instanceof Message\MessageIterator);
+        $this->assertTrue($messages instanceof MessageIterator);
 
         // ------------------------------------ deleteMessage()
         foreach ($messages as $i => $message) {
+            $this->assertTrue($message instanceof Message);
             $this->assertTrue($this->queue->deleteMessage($message));
         }
     }
-
-/*
-    public function test_set_getLogger()
+    
+    public function testSchedule()
     {
-        $logger = new Log\Logger(new Writer\Null);
-
-        $this->assertTrue($this->queue->setLogger($logger) instanceof Queue);
-        $this->assertTrue($this->queue->getLogger() instanceof Log\Logger);
-
-        // parameter verification
-        try {
-            $this->queue->setLogger(array());
-            $this->fail('setlogger() passed an array and succeeded (bad)');
-        } catch (\Exception $e) {
-            $this->assertTrue(true);
+        if (!$this->queue->isSendParamSupported(SendParameters::SCHEDULE)) {
+            $this->markTestSkipped('schedule() not supported');
         }
+        
+        $this->assertTrue($this->queue->schedule('Hello World', 2, $interval));
+        
+        if ($this->queue->isSendParamSupported(SendParameters::INTERVAL)) {
+            $this->assertTrue($this->queue->schedule('Hello World', 2, 2));
+        }        
     }
-*/
-
-    public function test_capabilities()
+    
+    /**
+     * ArrayAdapter can't await
+     * @todo add EventManager case
+     */
+    public function testAwait()
     {
-        $list = $this->queue->getCapabilities();
-        $this->assertTrue(is_array($list));
-
-        // these functions must have an boolean answer
-        $func = array(
-            'create', 'delete', 'send', 'receive',
-            'deleteMessage', 'getQueues', 'count',
-            'isExists'
-        );
-
-        foreach ( array_values($func) as $f ) {
-            $this->assertTrue(isset($list[$f]));
-            $this->assertTrue(is_bool($list[$f]));
+        if (!$this->queue->canAwait()) {
+            $this->markTestSkipped('await() not supported');
         }
+        
+        $this->queue->await(null, function(){
+        	$this->assertTrue(true);
+        });
     }
 
-    public function test_isSupported()
+    public function testGetQueues()
     {
-        $list = $this->queue->getCapabilities();
-        foreach ( $list as $function => $result ) {
-            $this->assertTrue(is_bool($result));
-            if ( $result ) {
-                $this->assertTrue($this->queue->isSupported($function));
-            } else {
-                $this->assertFalse($this->queue->isSupported($function));
-            }
+        if (!$this->queue->canListQueues()) {
+            $this->markTestSkipped("canListQueues() is not supported");
         }
-    }
-
-    public function test_getQueues()
-    {
+        
         $queues = $this->queue->getQueues();
         $this->assertTrue(is_array($queues));
-        $this->assertTrue(in_array($this->config['name'], $queues));
+        $this->assertTrue(in_array($this->name, $queues));
     }
 }

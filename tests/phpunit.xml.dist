@@ -19,10 +19,7 @@
             <exclude>CustomTest.php</exclude>
             <exclude>FactoryTest.php</exclude>
             <exclude>MessageTest.php</exclude>
-            <exclude>Queue1Test.php</exclude>
-            <exclude>Queue2Test.php</exclude>
-            <exclude>QueueBaseTest.php</exclude>
-            <exclude>QueueTest.php</exclude>
+<!--            <exclude>QueueTest.php</exclude>			-->			
             
         </testsuite>
     </testsuites>
