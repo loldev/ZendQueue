@@ -141,17 +141,17 @@ class Queue implements Countable
             $options = $this->getOptions();
             $adapter = new $adapterName(array('options' => $options->getAdapterOptions(), 'driverOptions' => $options->getDriverOptions() ));
         }
-        
+
         if (($type = gettype($adapter)) != 'object') {
             throw new Exception\InvalidArgumentException('$adapter must be a string or an object implementing \ZendQueue\Adapter\AdapterInterface. '.$type.' given.');
         }
-        
+
         if (!$adapter instanceof AdapterInterface) {
             throw new Exception\InvalidArgumentException("Adapter class ".get_class($adapter)." does not implement \ZendQueue\Adapter\AdapterInterface");
         }
 
         $this->adapter = $adapter;
-        
+
         if (! ($this->adapter instanceof Null)) {
             $this->adapter->create($this->getName());
         }
@@ -359,7 +359,7 @@ class Queue implements Countable
             return $this->getAdapter()->await($this, $closure, $params);
         }
 
-        //emulate?
+        //can emulate await?
         if ($this->getOptions()->getEnableAwaitEmulation()) {
 
             $sleepSeconds = $this->getOptions()->getPollingInterval();
@@ -419,21 +419,62 @@ class Queue implements Countable
      * Capabilities
     *********************************************************************/
 
+    /**
+     * Can queue wait for messages?
+     *
+     * Return true if the adapter is await-capable or enableAwaitEmulation is active.
+     *
+     * @return bool
+     */
     public function canAwait()
     {
-        return ($this->getAdapter() instanceof AwaitCapableInterface);
+        return ($this->getAdapter() instanceof AwaitCapableInterface) || $this->getOptions()->getEnableAwaitEmulation();
     }
 
+    /**
+     * Is queue using await emulations?
+     *
+     * Return true if the adapter isn't await-capable and enableAwaitEmulation is active.
+     *
+     * @return bool
+     */
+    public function isAwaitEmulation()
+    {
+        return !($this->getAdapter() instanceof AwaitCapableInterface) && $this->getOptions()->getEnableAwaitEmulation();
+    }
+
+    /**
+     * Can queue delete message?
+     *
+     * Return true if the adapter is capable to delete messages.
+     *
+     * @return bool
+     */
     public function canDeleteMessage()
     {
         return $this->getAdapter() instanceof DeleteMessageCapableInterface;
     }
 
+    /**
+     * Can count in queue messages?
+     *
+     * Return true if the adapter can count messages.
+     *
+     * @return bool
+     */
     public function canCountMessages()
     {
         return $this->getAdapter() instanceof CountMessagesCapableInterface;
     }
 
+
+    /**
+     * Can list all available queues?
+     *
+     * Return true if the adapter can list all queues available for the current adapter.
+     *
+     * @return bool
+     */
     public function canListQueues()
     {
         return $this->getAdapter() instanceof ListQueuesCapableInterface;
