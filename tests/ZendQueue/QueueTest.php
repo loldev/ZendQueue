@@ -171,8 +171,9 @@ class QueueTest extends \PHPUnit_Framework_TestCase
         //Ensure we have one message at least
         $this->queue->send('test');
 
-        $this->queue->await(null, function(){
-        	$this->assertTrue(true);
+        $queueTest = $this;
+        $this->queue->await(null, function() use($queueTest) {
+        	$queueTest->assertTrue(true);
         	return false; //stop awaiting
         });
     }
