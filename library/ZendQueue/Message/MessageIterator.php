@@ -13,6 +13,7 @@ namespace ZendQueue\Message;
 use Countable;
 use Iterator;
 use ZendQueue\Queue;
+use Zend\Stdlib\Message;
 
 /**
  *
@@ -24,44 +25,35 @@ class MessageIterator implements Countable, Iterator
      *
      * @var array
      */
-    protected $_data = array();
-
-     /**
-     * Connected is true if we have a reference to a live
-     * Queue object.
-     * This is false after the Message has been deserialized.
-     *
-     * @var boolean
-     */
-    protected $_connected = true;
+    protected $data = array();
 
     /**
      * Queue instance
      *
      * @var Queue
      */
-    protected $_queue = null;
+    protected $queue = null;
 
     /**
-     * Name of the class of the Adapter object.
+     * Name of the class of the queue object.
      *
      * @var string
      */
-    protected $_queueClass = null;
+    protected $queueClass = null;
 
     /**
      * Name of the queue
      *
      * @var string
      */
-    protected $_queueName = null;
+    protected $queueName = null;
 
     /**
      * Default Message class name, only used if not specified in data
      *
      * @var string
      */
-    protected $_messageClass = '\ZendQueue\Message\Message';
+    protected $messageClass = '\ZendQueue\Message\Message';
 
 
      /**
@@ -69,7 +61,7 @@ class MessageIterator implements Countable, Iterator
      *
      * @var integer
      */
-    protected $_pointer = 0;
+    protected $pointer = 0;
 
     /**
      * Constructor
@@ -90,23 +82,17 @@ class MessageIterator implements Countable, Iterator
     public function __construct(array $data = array(), Queue $queue = null)
     {
         if ($queue) {
-            $this->_queue          = $queue;
-            $this->_queueClass     = get_class($queue);
-            $this->_queueName      = $queue->getName();
-            $this->_messageClass   = $queue->getOptions()->getMessageClass();
-            $this->_connected      = true;
-        } else {
-            $this->_connected = false;
+            $this->setQueue($queue);
         }
 
-        $this->_data = $data;
+        $this->data = $data;
     }
 
     protected function _lazyMessageFactory($index)
     {
-        if (!($this->_data[$index] instanceof Message)) {
-            $data = $this->_data[$index];
-            $msgClass = isset($data['class']) ? $data['class'] : $this->_messageClass;
+        if (!($this->data[$index] instanceof Message)) {
+            $data = $this->data[$index];
+            $msgClass = isset($data['class']) ? $data['class'] : $this->messageClass;
 
             /* @var $message \Zend\Stdlib\Message */
             $message = new $msgClass;
@@ -119,33 +105,20 @@ class MessageIterator implements Countable, Iterator
                 $message->setMetadata($data['metadata']);
             }
 
-            $this->_data[$index] = $message;
+            $this->data[$index] = $message;
         }
-        return $this->_data[$index];
+        return $this->data[$index];
     }
 
     /**
-     * Store queue and data in serialized object
+     * Store queue and data in serialized object excluding the queue instance
      *
      * @return array
      */
     public function __sleep()
     {
-        return array('_data', '_queueClass', '_queueName', '_messageClass', '_pointer');
+        return array('data', 'queueClass', 'queueName', 'messageClass', 'pointer');
     }
-
-    /**
-     * Setup to do on wakeup.
-     * A de-serialized Message should not be assumed to have access to a live
-     * queue connection, so set _connected = false.
-     *
-     * @return void
-     */
-    public function __wakeup()
-    {
-        $this->_connected = false;
-    }
-
 
     /**
      * Returns the queue object, or null if this is disconnected message set
@@ -154,40 +127,35 @@ class MessageIterator implements Countable, Iterator
      */
     public function getQueue()
     {
-        return $this->_queue;
+        return $this->queue;
     }
 
-//     /**
-//      * Set the queue object, to re-establish a live connection
-//      * to the queue for a Message that has been de-serialized.
-//      *
-//      * @param  AdapterInterface $queue
-//      * @return boolean
-//      * @throws Exception\ExceptionInterface
-//      */
-//     public function setQueue(Queue $queue)
-//     {
-//         $this->_queue     = $queue;
-//         $this->_connected = false;
+    /**
+     * Set the queue object, to re-establish a live connection
+     * when iterator has been de-serialized.
+     *
+     * @param  Queue $queue
+     * @return MessageIterator
+     */
+    public function setQueue(Queue $queue)
+    {
+        $this->queue          = $queue;
+        $this->queueClass     = get_class($queue);
+        $this->queueName      = $queue->getName();
+        $this->messageClass   = $queue->getOptions()->getMessageClass();
 
-//         // @todo This works only if we have iterated through
-//         // the result set once to instantiate the rows.
-//         foreach ($this->_data as $i => $message) {
-//             $this->_connected = $this->_connected || $message->setQueue($queue);
-//         }
-
-//         return $this->_connected;
-//     }
+        return $this;
+    }
 
     /**
      * Query the class name of the Queue object for which this
-     * Message was created.
+     * MessageIterator was created.
      *
      * @return string
      */
     public function getQueueClass()
     {
-        return $this->_queueClass;
+        return $this->queueClass;
     }
 
     /*
@@ -203,7 +171,7 @@ class MessageIterator implements Countable, Iterator
      */
     public function rewind()
     {
-        $this->_pointer = 0;
+        $this->pointer = 0;
     }
 
     /**
@@ -217,7 +185,7 @@ class MessageIterator implements Countable, Iterator
     {
         return (($this->valid() === false)
             ? null
-            : $this->_lazyMessageFactory($this->_pointer)); // return the messages object
+            : $this->_lazyMessageFactory($this->pointer)); // return the messages object
     }
 
     /**
@@ -229,7 +197,7 @@ class MessageIterator implements Countable, Iterator
      */
     public function key()
     {
-        return $this->_pointer;
+        return $this->pointer;
     }
 
     /**
@@ -241,7 +209,7 @@ class MessageIterator implements Countable, Iterator
      */
     public function next()
     {
-        ++$this->_pointer;
+        ++$this->pointer;
     }
 
     /**
@@ -253,7 +221,7 @@ class MessageIterator implements Countable, Iterator
      */
     public function valid()
     {
-        return $this->_pointer < count($this->_data);
+        return $this->pointer < count($this->data);
     }
 
     /*
@@ -269,6 +237,6 @@ class MessageIterator implements Countable, Iterator
      */
     public function count()
     {
-        return count($this->_data);
+        return count($this->data);
     }
 }

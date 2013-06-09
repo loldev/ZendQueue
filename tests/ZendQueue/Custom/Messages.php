@@ -30,15 +30,15 @@ class Messages extends \ZendQueue\Message\MessageIterator implements \ArrayAcces
     public function __construct(array $config=array())
     {
         if (isset($config['queue'])) {
-            $this->_queue = $config['queue'];
-            $this->_queueClass = get_class($this->_queue);
+            $this->queue = $config['queue'];
+            $this->queueClass = get_class($this->queue);
             $this->_connected = true;
         } else {
             $this->_connected = false;
         }
 
         if (isset($config['messageClass'])) {
-            $this->_messageClass = $config['messageClass'];
+            $this->messageClass = $config['messageClass'];
         }
 
         if (isset($config['data']) && ! is_array($config['data'])) {
@@ -46,7 +46,7 @@ class Messages extends \ZendQueue\Message\MessageIterator implements \ArrayAcces
         }
 
         // load the message class
-        $class = $this->_messageClass;
+        $class = $this->messageClass;
 
         if (isset($config['data'])) {
             // for each of the messages
@@ -56,7 +56,7 @@ class Messages extends \ZendQueue\Message\MessageIterator implements \ArrayAcces
 
                 // If queue has not been set, then use the default.
                 if (empty($message['queue'])) {
-                    $message['queue'] = $this->_queue;
+                    $message['queue'] = $this->queue;
                 }
 
                 // construct the message and add it to _data[];
@@ -74,11 +74,11 @@ class Messages extends \ZendQueue\Message\MessageIterator implements \ArrayAcces
     public function __destruct()
     {
         if ($this->_connected) {
-            foreach ($this->_data as $i => $value) {
+            foreach ($this->data as $i => $value) {
                 $value->delete(false);
             }
         } else {
-            unset($this->_data);
+            unset($this->data);
         }
     }
 
@@ -151,6 +151,6 @@ class Messages extends \ZendQueue\Message\MessageIterator implements \ArrayAcces
      */
     public function seek($index)
     {
-        $this->_pointer = $index;
+        $this->pointer = $index;
     }
 }
