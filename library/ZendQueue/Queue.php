@@ -213,25 +213,6 @@ class Queue implements Countable
         return $deleted;
     }
 
-    /**
-     * Delete a message from the queue
-     *
-     * Returns true if the message is deleted, false if the deletion is
-     * unsuccessful.
-     *
-     *
-     * @param  Message $message
-     * @return boolean
-     * @throws Exception\UnsupportedMethodCallException
-     */
-    public function deleteMessage(Message $message)
-    {
-        if (!$this->canDeleteMessage()) {
-            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
-        }
-
-        return $this->getAdapter()->deleteMessage($this, $message);
-    }
 
     /**
      * Send a message to the queue
@@ -294,21 +275,6 @@ class Queue implements Countable
         $params->setScheduling($schedule, $interval);
 
         return $this->send($message, $params);
-    }
-
-    /**
-     * Returns the approximate number of messages in the queue
-     *
-     * Returns null if the adapter doesn't support message count.
-     *
-     * @return integer|null
-     */
-    public function count()
-    {
-        if ($this->canCountMessages()) {
-            return $this->getAdapter()->countMessages($this);
-        }
-        return null;
     }
 
     /**
@@ -386,12 +352,47 @@ class Queue implements Countable
 
 
     /**
+     * Returns the approximate number of messages in the queue
+     *
+     * @return integer|null
+     * @throws Exception\UnsupportedMethodCallException
+     */
+    public function count()
+    {
+        if (!$this->canCountMessages()) {
+            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
+        }
+
+        return $this->getAdapter()->countMessages($this);
+    }
+
+    /**
+     * Delete a message from the queue
+     *
+     * Returns true if the message is deleted, false if the deletion is
+     * unsuccessful.
+     *
+     *
+     * @param  Message $message
+     * @return boolean
+     * @throws Exception\UnsupportedMethodCallException
+     */
+    public function deleteMessage(Message $message)
+    {
+        if (!$this->canDeleteMessage()) {
+            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
+        }
+
+        return $this->getAdapter()->deleteMessage($this, $message);
+    }
+
+    /**
      * Get an array of all available queues
      *
      * @return array
      * @throws Exception\UnsupportedMethodCallException
      */
-    public function getQueues()
+    public function listQueues()
     {
         if (!$this->canListQueues()) {
             throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
