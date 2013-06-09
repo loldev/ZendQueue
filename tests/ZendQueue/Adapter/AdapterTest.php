@@ -116,9 +116,9 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
 
 //        set_error_handler(array($this, 'handleErrors'));
 //         try {
-            
-        $queue = new Queue($queueName, $class, $options); 
-            
+
+        $queue = new Queue($queueName, $class, $options);
+
 //         } catch (\Exception $e) {
 //             $this->markTestSkipped();
 //             restore_error_handler();
@@ -147,17 +147,17 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         if ($this->getAdapterName() == 'Null') {
             return false;
         }
-        
+
         if ( is_string($needles)) {
             $needles = array($needles);
         }
-        
+
         foreach ( $needles as $needle ) {
             if ( !method_exists($adapter, $needle)) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -174,20 +174,20 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         if ($this->getAdapterName() == 'Null') {
         	return false;
         }
-        
+
         if ( is_string($needles)) {
             $needles = array($needles);
         }
-        
+
         foreach ( $needles as $needle ) {
             if ( !method_exists($queue, $needle)) {
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     // test the constants
     public function testConst()
     {
@@ -197,11 +197,11 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
     public function testGetOptions()
     {
         $options = $this->getTestOptions();
-        
+
         $adapterOptions = array(
-            'dummy' => 'dummyValue'  
+            'dummy' => 'dummyValue'
         );
-        
+
         $options->setAdapterOptions($adapterOptions);
 
         if (!$queue = $this->createQueue(__FUNCTION__, $options)) {
@@ -210,7 +210,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $adapter = $queue->getAdapter();
 
         $new = $adapter->getOptions();
-        
+
         $this->assertTrue(is_array($new));
         $this->assertTrue(is_array($new['options']));
         $this->assertEquals($adapterOptions['dummy'], $new['options']['dummy']);
@@ -286,7 +286,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         }
         $adapter = $queue->getAdapter();
 
-        
+
         // check to see if this function is supported
         // Now those methods should be mandatory <Pruno>
         if (!$this->adapterHasSupport($adapter, array('send', 'receive'))) {
@@ -424,14 +424,14 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $body = 'this is a test message';
         $message = new Message();
         $message->setContent($body);
-        
+
         if (!$adapter->send($queue, $message)) {
             $this->fail('send() failed');
         }
 
         // receive the record we created.
         if ($this->adapterHasSupport($adapter, 'receive')) {
-            /* @var MessageIterator $messages */ 
+            /* @var MessageIterator $messages */
             $messages = $adapter->receive($queue);
             foreach ($messages as $message) {
                 $this->assertTrue($message instanceof Message);
@@ -506,7 +506,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
 
         $body = 'this is a test message';
         $message = new Message();
-        $message->setContent($body); 
+        $message->setContent($body);
         if (!$adapter->send($queue, $message)) {
         	$this->fail('send() failed');
         }
@@ -577,7 +577,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
 
         // for a test case, the count should be zero at first.
         $this->assertEquals($adapter->countMessages($queue), 0);
-        
+
         if (!$this->adapterHasSupport($adapter, array('send', 'receive'))) {
             $this->markTestSkipped('send() and receive() are not supported');
         }
@@ -585,7 +585,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $body = 'this is a test message';
         // send a message
         $message = new Message();
-        $message->setContent($body); 
+        $message->setContent($body);
         if (!$adapter->send($queue, $message)) {
             $this->fail('send() failed');
         }
@@ -640,9 +640,9 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
                 $this->assertEquals($i, $message->getContent());
                 $queue->deleteMessage($message);
             }
-        
+
             $this->assertEquals(5, count($queue));
-            
+
             for($i = 5; $i < 10; $i++) {
                 $messages = $queue->receive();
                 $message = $messages->current();
@@ -651,8 +651,10 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
             }
         }
 
-        $this->assertEquals(0, count($queue));
-        
+        if ($this->queueHasSupport($queue, 'count')) {
+            $this->assertEquals(0, count($queue));
+        }
+
         if ($this->queueHasSupport($queue, 'deleteQueue')) {
             $this->assertTrue($queue->deleteQueue());
         }
@@ -688,7 +690,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $reciveParams = new ReceiveParameters();
         $reciveParams->setTimeout($default_timeout);
         $messages = $queue->receive(1, $reciveParams); // messages are deleted at the bottom.
-        
+
         if ($this->queueHasSupport($queue, 'count')) {
             $this->assertEquals(1, $queue->count());
         }

@@ -39,37 +39,37 @@ class QueueTest extends \PHPUnit_Framework_TestCase
      * @var string
      */
     protected $name;
-    
+
     /**
      * @var ArrayAdapter
      */
     protected $adapter;
-    
+
     /**
      * @var QueueOptions
      */
     protected $options;
-    
+
     /**
      * @var Queue
      */
     protected $queue;
-    
-    
+
+
     protected function setUp()
     {
         $this->name = 'queueTest';
-        
+
         $this->options = new QueueOptions();
-        
+
         $this->adapter = new ArrayAdapter($this->options->getAdapterOptions());
-        
+
         $this->queue = new Queue($this->name, $this->adapter);
     }
 
     protected function tearDown()
     {
-        
+
     }
 
     public function testConstruct()
@@ -116,7 +116,7 @@ class QueueTest extends \PHPUnit_Framework_TestCase
 
         $message = 'Hello world';
         $this->assertTrue($this->queue->send($message));
-        
+
         $message = new Message();
         $message->setContent('Hello world again');
         $this->assertTrue($this->queue->send($message));
@@ -125,7 +125,7 @@ class QueueTest extends \PHPUnit_Framework_TestCase
         if ($this->queue->canCountMessages()) {
             $this->assertEquals($this->queue->count(), 2);
         }
-        
+
         // ------------------------------------ receive()
         // parameter verification
         try {
@@ -144,20 +144,20 @@ class QueueTest extends \PHPUnit_Framework_TestCase
             $this->assertTrue($this->queue->deleteMessage($message));
         }
     }
-    
+
     public function testSchedule()
     {
         if (!$this->queue->isSendParamSupported(SendParameters::SCHEDULE)) {
             $this->markTestSkipped('schedule() not supported');
         }
-        
+
         $this->assertTrue($this->queue->schedule('Hello World', 2, $interval));
-        
+
         if ($this->queue->isSendParamSupported(SendParameters::INTERVAL)) {
             $this->assertTrue($this->queue->schedule('Hello World', 2, 2));
-        }        
+        }
     }
-    
+
     /**
      * ArrayAdapter can't await
      * @todo add EventManager case
@@ -167,9 +167,13 @@ class QueueTest extends \PHPUnit_Framework_TestCase
         if (!$this->queue->canAwait()) {
             $this->markTestSkipped('await() not supported');
         }
-        
+
+        //Ensure we have one message at least
+        $this->queue->send('test');
+
         $this->queue->await(null, function(){
         	$this->assertTrue(true);
+        	return false; //stop awaiting
         });
     }
 
@@ -178,8 +182,8 @@ class QueueTest extends \PHPUnit_Framework_TestCase
         if (!$this->queue->canListQueues()) {
             $this->markTestSkipped("canListQueues() is not supported");
         }
-        
-        $queues = $this->queue->getQueues();
+
+        $queues = $this->queue->listQueues();
         $this->assertTrue(is_array($queues));
         $this->assertTrue(in_array($this->name, $queues));
     }
