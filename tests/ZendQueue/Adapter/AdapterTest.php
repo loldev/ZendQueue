@@ -756,6 +756,24 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $queue->deleteQueue();
     }
 
+    public function testAdapterShouldReturnNoMessagesWhenZeroCountRequested()
+    {
+        if (!$queue = $this->createQueue(__FUNCTION__)) {
+            return;
+        }
+        $adapter = $queue->getAdapter();
+
+        if (!$this->queueHasSupport($queue, 'receive')) {
+            return;
+        }
+
+        $queue->send('My Test Message 1');
+        $queue->send('My Test Message 2');
+
+        $messages = $adapter->receive($queue, 0);
+        $this->assertEquals(0, count($messages));
+    }
+
     /**
      * tests a function for an exception
      *

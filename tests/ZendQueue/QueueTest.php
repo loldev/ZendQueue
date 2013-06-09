@@ -135,13 +135,23 @@ class QueueTest extends \PHPUnit_Framework_TestCase
             $this->assertTrue(true);
         }
 
+        // parameter verification
+        try {
+            $this->queue->receive(0);
+            $this->fail('receive() $maxMessages must be a integer or null');
+        } catch (\Exception $e) {
+            $this->assertTrue(true);
+        }
+
         $messages = $this->queue->receive();
         $this->assertTrue($messages instanceof MessageIterator);
 
         // ------------------------------------ deleteMessage()
-        foreach ($messages as $i => $message) {
-            $this->assertTrue($message instanceof Message);
-            $this->assertTrue($this->queue->deleteMessage($message));
+        if($this->queue->canDeleteMessage()) {
+            foreach ($messages as $i => $message) {
+                $this->assertTrue($message instanceof Message);
+                $this->assertTrue($this->queue->deleteMessage($message));
+            }
         }
     }
 
