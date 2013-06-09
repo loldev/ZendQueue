@@ -13,7 +13,7 @@ namespace ZendQueue\Message;
 use Countable;
 use Iterator;
 use ZendQueue\Queue;
-use Zend\Stdlib\Message;
+use Zend\Stdlib\Message as StdMessage;
 
 /**
  *
@@ -90,7 +90,7 @@ class MessageIterator implements Countable, Iterator
 
     protected function _lazyMessageFactory($index)
     {
-        if (!($this->data[$index] instanceof Message)) {
+        if (!($this->data[$index] instanceof StdMessage)) {
             $data = $this->data[$index];
             $msgClass = isset($data['class']) ? $data['class'] : $this->messageClass;
 
