@@ -13,6 +13,7 @@ namespace ZendQueue\Adapter\Mongo;
 use ZendQueue\Adapter\AbstractAdapter;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
 use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
+use ZendQueue\Exception;
 use ZendQueue\Queue;
 use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Parameter\ReceiveParameters;

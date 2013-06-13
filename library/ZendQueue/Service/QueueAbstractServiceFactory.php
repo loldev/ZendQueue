@@ -52,8 +52,8 @@ class QueueAbstractServiceFactory implements AbstractFactoryInterface
             isset($config[$requestedName])
             && is_array($config[$requestedName])
             && !empty($config[$requestedName])
-//             && isset($config[$requestedName]['name'])
-//             && isset($config[$requestedName]['adapter'])
+            && isset($config[$requestedName]['name'])
+            && isset($config[$requestedName]['adapter'])
         );
     }
 
