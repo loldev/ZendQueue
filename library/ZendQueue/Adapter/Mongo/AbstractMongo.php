@@ -58,7 +58,7 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
             $dsn = "mongodb://$credentials{$driverOptions['host']}/{$driverOptions['dbname']}";
         }
 
-        $mongo = new \Mongo($dsn, $options);
+        $mongo = new \Mongo($dsn);
 
         $dbName = explode('/', $dsn);
         $dbName = array_pop($dbName);
