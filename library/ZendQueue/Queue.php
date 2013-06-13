@@ -23,6 +23,7 @@ use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Parameter\ReceiveParameters;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\Event;
+use ZendQueue\Adapter\AdapterFactory;
 
 /**
  *
@@ -77,6 +78,48 @@ class Queue implements Countable
         }
 
         $this->setOptions($options);
+    }
+
+    /**
+     * Instantiate a queue
+     *
+     * @param  array|Traversable $cfg
+     * @return Queue
+     * @throws Exception\InvalidArgumentException
+     */
+    public static function factory($cfg)
+    {
+        if ($cfg instanceof Traversable) {
+            $cfg = ArrayUtils::iteratorToArray($cfg);
+        }
+
+        if (!is_array($cfg)) {
+            throw new Exception\InvalidArgumentException(
+                'The factory needs an associative array '
+                . 'or a Traversable object as an argument'
+            );
+        }
+
+        if (!isset($cfg['name'])) {
+            throw new Exception\InvalidArgumentException('Missing "name"');
+        }
+
+        if ($cfg['adapter'] instanceof AdapterInterface) {
+            // $cfg['adapter'] is already an adapter object
+            $adapter = $cfg['adapter'];
+        } else {
+            $adapter = AdapterFactory::factory($cfg['adapter']);
+        }
+
+        $options = null;
+        if (isset($cfg['options'])) {
+            if (!is_array($cfg['options'])) {
+                throw new Exception\InvalidArgumentException('"options" must be an array, ' . gettype($cfg['options']) . ' given.');
+            }
+            $options = new QueueOptions($cfg['options']);
+        }
+
+        return new self($cfg['name'], $adapter, $options);
     }
 
 

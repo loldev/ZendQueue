@@ -12,12 +12,13 @@ namespace ZendQueue\Service;
 
 use Zend\ServiceManager\AbstractFactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
-use ZendQueue\Adapter\AdapterFactory;
+use ZendQueue\Adapter;
+use ZendQueue\Queue;
 
 /**
- * Queue adapter factory for multiple adapters.
+ * Queue factory for multiple queues.
  */
-class QueueAdapterAbstractServiceFactory implements AbstractFactoryInterface
+class QueueAbstractServiceFactory implements AbstractFactoryInterface
 {
     /**
      * @var array
@@ -25,16 +26,19 @@ class QueueAdapterAbstractServiceFactory implements AbstractFactoryInterface
     protected $config;
 
     /**
-     * Configuration key for adapters objects
+     * Configuration key for queues objects
      *
      * @var string
      */
-    protected $configKey = 'queue_adapters';
+    protected $configKey = 'queues';
+
 
     /**
+     * Can we create a queue by the requested name?
+     *
      * @param  ServiceLocatorInterface $services
-     * @param  string                  $name
-     * @param  string                  $requestedName
+     * @param  string $name
+     * @param  string $requestedName
      * @return bool
      */
     public function canCreateServiceWithName(ServiceLocatorInterface $services, $name, $requestedName)
@@ -44,24 +48,42 @@ class QueueAdapterAbstractServiceFactory implements AbstractFactoryInterface
             return false;
         }
 
-        return (isset($config[$requestedName]) && is_array($config[$requestedName]));
+        return (
+            isset($config[$requestedName])
+            && is_array($config[$requestedName])
+            && !empty($config[$requestedName])
+//             && isset($config[$requestedName]['name'])
+//             && isset($config[$requestedName]['adapter'])
+        );
     }
 
     /**
-     * @param  ServiceLocatorInterface              $services
-     * @param  string                               $name
-     * @param  string                               $requestedName
-     * @return \ZendQueue\Adapter\AdapterInterface
+     * Create a queue
+     *
+     * @param  ServiceLocatorInterface $services
+     * @param  string $name
+     * @param  string $requestedName
+     * @return Queue
      */
     public function createServiceWithName(ServiceLocatorInterface $services, $name, $requestedName)
     {
         $config = $this->getConfig($services);
+
         $config = $config[$requestedName];
-        return AdapterFactory::factory($config);
+
+        if (isset($config['adapter']) && is_string($config['adapter']) && $services->has($config['adapter'])) {
+            $adapter = $services->get($config['adapter']);
+            if ($adapter instanceof Adapter\AdapterInterface) {
+               $config['adapter'] = $adapter;
+            }
+        }
+
+        $queue = Queue::factory($config);
+        return $queue;
     }
 
     /**
-     * Retrieve queues configuration, if any
+     * Get queues configuration, if any
      *
      * @param  ServiceLocatorInterface $services
      * @return array
@@ -78,7 +100,9 @@ class QueueAdapterAbstractServiceFactory implements AbstractFactoryInterface
         }
 
         $config = $services->get('Config');
-        if (!isset($config[$this->configKey])) {
+        if (!isset($config[$this->configKey])
+        || !is_array($config[$this->configKey])
+        ) {
             $this->config = array();
             return $this->config;
         }

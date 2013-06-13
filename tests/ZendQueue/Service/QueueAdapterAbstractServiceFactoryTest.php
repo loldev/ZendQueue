@@ -64,7 +64,7 @@ class QueueAdapterAbstractServiceFactoryTest extends \PHPUnit_Framework_TestCase
         $this->assertNotSame($adapterA, $adapterB);
     }
 
-    public function testInvalidCacheServiceNameWillBeIgnored()
+    public function testInvalidServiceNameWillBeIgnored()
     {
         $this->assertFalse($this->sm->has('invalid'));
     }

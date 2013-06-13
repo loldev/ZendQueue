@@ -24,7 +24,7 @@ abstract class AdapterFactory
      *
      * @param  array|Traversable $cfg
      * @return AdapterInterface
-     * @throws Exception\RuntimeException
+     * @throws Exception\InvalidArgumentException
      */
     public static function factory($cfg)
     {
