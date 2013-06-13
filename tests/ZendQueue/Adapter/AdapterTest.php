@@ -98,7 +98,10 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
     protected function createQueue($name, QueueOptions $options = null)
     {
 
-        $adapter = AdapterFactory::factory($this->getAdapterName(), $this->getTestOptions());
+        $adapter = AdapterFactory::factory(array(
+            'adapter' => $this->getAdapterName(),
+            'options' => $this->getTestOptions(),
+        ));
 
         $queue   = new Queue($name, $adapter, $options);
 

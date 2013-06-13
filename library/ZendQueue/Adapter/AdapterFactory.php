@@ -22,22 +22,39 @@ abstract class AdapterFactory
     /**
      * Instantiate a queue adapter
      *
-     * @param  string|Adapter\AdapterInterface          $adapterName
-     * @param  array|Traversable                        $options
+     * @param  array|Traversable $cfg
      * @return AdapterInterface
      * @throws Exception\RuntimeException
      */
-    public static function factory($adapterName, $options = array())
+    public static function factory($cfg)
     {
-        if ($adapterName instanceof AdapterInterface) {
-            // $adapterName is already an adapter object
-            $adapter = $adapterName;
-        } else {
-            $adapter = static::getAdapterPluginManager()->get($adapterName);
+        if ($cfg instanceof Traversable) {
+            $cfg = ArrayUtils::iteratorToArray($cfg);
         }
 
-        if ($options) {
-            $adapter->setOptions($options);
+        if (!is_array($cfg)) {
+            throw new Exception\InvalidArgumentException(
+                'The factory needs an associative array '
+                . 'or a Traversable object as an argument'
+            );
+        }
+
+        if (!isset($cfg['adapter'])) {
+            throw new Exception\InvalidArgumentException('Missing "adapter"');
+        }
+
+        if ($cfg['adapter'] instanceof AdapterInterface) {
+            // $cfg['adapter'] is already an adapter object
+            $adapter = $cfg['adapter'];
+        } else {
+            $adapter = static::getAdapterPluginManager()->get($cfg['adapter']);
+        }
+
+        if (isset($cfg['options'])) {
+            if (!is_array($cfg['options'])) {
+                throw new Exception\InvalidArgumentException('"options" must be an array, ' . gettype($cfg['options']) . ' given.');
+            }
+            $adapter->setOptions($cfg['options']);
         }
 
         return $adapter;
