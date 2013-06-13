@@ -24,10 +24,46 @@ interface AdapterInterface
     /**
      * Constructor
      *
-     * @param  array|Traversable $options
+     * array|Traversable $options
      * @return void
      */
-    public function __construct($options);
+    public function __construct($options = array());
+
+
+    /**
+     * Set options
+     *
+     * @param array|Traversable $options
+     * @return AdapterInterface Fluent interface
+     */
+    public function setOptions($options);
+
+    /**
+     * Get options
+     *
+     * @return array
+    */
+    public function getOptions();
+
+
+    /**
+     * List avaliable params for send()
+     *
+     * @return array
+     */
+    public function getAvailableSendParams();
+
+    /**
+     * List avaliable params for receive()
+     *
+     * @return array
+    */
+    public function getAvailableReceiveParams();
+
+
+    /********************************************************************
+     * Queue management functions
+    *********************************************************************/
 
     /**
      * Ensure connection
@@ -64,7 +100,7 @@ interface AdapterInterface
 
 
     /********************************************************************
-     * Messsage management functions
+     * Message management functions
      *********************************************************************/
 
     /**
@@ -86,23 +122,9 @@ interface AdapterInterface
      * @param  integer|null $maxMessages Maximum number of messages to return
      * @param  ReceiveParameters $params
      * @return MessageIterator
+     * @throws Exception\QueueNotFoundException
+     * @throws Exception\RuntimeException
      */
     public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null);
-
-
-    /********************************************************************
-     * Supporting functions
-     *********************************************************************/
-
-    public function getAvailableReceiveParams();
-
-    public function getAvailableSendParams();
-
-    /**
-     * Returns the configuration options in this adapter.
-     *
-     * @return array
-     */
-    public function getOptions();
 
 }

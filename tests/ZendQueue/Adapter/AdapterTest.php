@@ -18,6 +18,7 @@ use ZendQueue\Adapter\AdapterInterface;
 use ZendQueue\QueueOptions;
 use ZendQueue\Message\MessageIterator;
 use ZendQueue\Parameter\ReceiveParameters;
+use ZendQueue\Adapter\AdapterFactory;
 
 /*
  * The adapter test class provides a universal test class for all of the
@@ -72,8 +73,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
 
     public function getTestOptions()
     {
-        return new QueueOptions();
-//         return array('driverOptions' => array());
+         return array('driverOptions' => array());
     }
 
     /**
@@ -93,40 +93,21 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
      *
      * @param string $name - name of the queue to create
      * @param QueueOptions $options
-     * @return Zend_Queue
+     * @return Queue
      */
     protected function createQueue($name, QueueOptions $options = null)
     {
-        if (is_array($name)) {
-            $config = $name;
+
+        $adapter = AdapterFactory::factory($this->getAdapterName(), $this->getTestOptions());
+
+        $queue   = new Queue($name, $adapter, $options);
+
+        if ($this->getAdapterName() != 'Null') {
+            $queue->ensureQueue();
         }
-
-        if ($options === null) {
-            $options = $this->getTestOptions();
-//             $config['name'] = $name;
-        }
-
-//         if (is_string($name)) {
-//             $config['name'] = $name;
-//         }
-
-        $queueName = $this->createQueueName($name);
-
-        $class = $this->getAdapterName();
-
-//        set_error_handler(array($this, 'handleErrors'));
-//         try {
-
-        $queue = new Queue($queueName, $class, $options);
-
-//         } catch (\Exception $e) {
-//             $this->markTestSkipped();
-//             restore_error_handler();
-//             return false;
-//         }
-//        restore_error_handler();
 
         return $queue;
+
     }
 
     public function handleErrors($errno, $errstr)
@@ -194,29 +175,29 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $this->markTestSkipped('must be tested in each individual adapter');
     }
 
-    public function testGetOptions()
+    public function testSetGetOptions()
     {
-        $options = $this->getTestOptions();
+
+        if (!$queue = $this->createQueue(__FUNCTION__)) {
+            return;
+        }
 
         $adapterOptions = array(
             'dummy' => 'dummyValue'
         );
 
-        $options->setAdapterOptions($adapterOptions);
-
-        if (!$queue = $this->createQueue(__FUNCTION__, $options)) {
-            return;
-        }
         $adapter = $queue->getAdapter();
+        $adapter->setOptions($adapterOptions);
 
         $new = $adapter->getOptions();
 
         $this->assertTrue(is_array($new));
-        $this->assertTrue(is_array($new['options']));
-        $this->assertEquals($adapterOptions['dummy'], $new['options']['dummy']);
+        $this->assertEquals($adapterOptions['dummy'], $new['dummy']);
 
         // delete the queue we created
         $queue->deleteQueue();
+        //Reset original options
+        $adapter->setOptions($this->getTestOptions());
     }
 
     // test the constructor
@@ -271,15 +252,16 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         if (!$queue = $this->createQueue(__FUNCTION__)) {
             return;
         }
-        $obj = new $class($queue->getOptions()->getAdapterOptions(), $queue);
+        $obj = new $class();
         $this->assertTrue($obj instanceof Adapter\AbstractAdapter);
     }
 
-    // this tests the configuration option $config['messageClass']
+    // this tests the configuration option of messageClass (\ZendQueue\Message\Message by default)
     public function testZendQueueMessageTest()
     {
-        $options = $this->getTestOptions();
-//         $options->setMessageClass('\ZendQueueTest\Adapter\MessageClass');
+        $options = new QueueOptions();
+
+        $this->assertEquals('\ZendQueue\Message\Message', $options->getMessageClass());
 
         if (!$queue = $this->createQueue(__FUNCTION__, $options)) {
             return;

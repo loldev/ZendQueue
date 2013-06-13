@@ -29,7 +29,16 @@ abstract class AbstractAdapter implements AdapterInterface
      *
      * @var array
      */
-    protected $_options = array();
+    private $_options = array();
+
+    /**
+     * Default options
+     *
+     * @var array
+     */
+    protected $defaultOptions = array(
+        'driverOptions' => array()
+    );
 
     /**
      * Internal array of queues to save on lookups
@@ -42,50 +51,86 @@ abstract class AbstractAdapter implements AdapterInterface
      * Constructor.
      *
      * $options is an array of key/value pairs or an instance of Traversable
-     * containing configuration options.  These options are common to most adapters:
+     * containing configuration options.
      *
      * @param  array|Traversable $options An array having configuration data
      * @throws Exception\InvalidArgumentException
      */
-    public function __construct($options)
+    public function __construct($options = array())
     {
+        $this->setOptions($options);
+    }
+
+
+    /**
+     * Set options
+     *
+     * @param array|Traversable $options
+     * @return AdapterInterface Fluent interface
+     */
+    public function setOptions($options)
+    {
+
         if ($options instanceof Traversable) {
             $options = ArrayUtils::iteratorToArray($options);
         }
 
         /*
          * Verify that adapter parameters are in an array.
-         */
+        */
         if (!is_array($options)) {
             throw new Exception\InvalidArgumentException('Adapter options must be an array or Traversable object');
         }
 
 
         $adapterOptions = array();
-        $driverOptions  = array();
+        $driverOptions  = isset($this->_options['driverOptions']) ? $this->_options['driverOptions'] : array();
 
-        // Normalize the options and merge with the defaults
-        if (array_key_exists('options', $options)) {
-            if (!is_array($options['options'])) {
-                throw new Exception\InvalidArgumentException("Configuration array 'options' must be an array");
-            }
-
-            // Can't use array_merge() because keys might be integers
-            foreach ($options['options'] as $key => $value) {
-                $adapterOptions[$key] = $value;
-            }
-        }
         if (array_key_exists('driverOptions', $options)) {
             // can't use array_merge() because keys might be integers
             foreach ((array)$options['driverOptions'] as $key => $value) {
                 $driverOptions[$key] = $value;
             }
         }
+
         $this->_options = array_merge($this->_options, $options);
-        $this->_options['options']       = $adapterOptions;
         $this->_options['driverOptions'] = $driverOptions;
 
+        return $this;
     }
+
+    /**
+     * Returns the configuration options in this adapter.
+     *
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->_options;
+    }
+
+
+    /**
+     * List avaliable params for send()
+     *
+     * @return array
+     */
+    public function getAvailableSendParams()
+    {
+        return array();
+    }
+
+
+    /**
+     * List avaliable params for receive()
+     *
+     * @return array
+     */
+    public function getAvailableReceiveParams()
+    {
+        return array();
+    }
+
 
     protected function _buildMessageInfo($id, $queue, $options = null)
     {
@@ -114,26 +159,6 @@ abstract class AbstractAdapter implements AdapterInterface
         if ($message->getMetadata($metadatumKey, null)) {
             $message->setMetadata($metadatumKey, null);
         }
-    }
-
-    /**
-     * Returns the configuration options in this adapter.
-     *
-     * @return array
-     */
-    public function getOptions()
-    {
-        return $this->_options;
-    }
-
-    public function getAvailableReceiveParams()
-    {
-        return array();
-    }
-
-    public function getAvailableSendParams()
-    {
-        return array();
     }
 
 }

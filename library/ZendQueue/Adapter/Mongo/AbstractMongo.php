@@ -26,18 +26,6 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
     const KEY_CONTENT     = 'c';
     const KEY_METADATA    = 'm';
 
-
-    /**
-     * @var \MongoDB
-     */
-    protected $mongoDb;
-
-    public function __construct($options)
-    {
-        parent::__construct($options);
-        $this->connect();
-    }
-
     /**
      * Ensure connection
      *
@@ -45,8 +33,7 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
      */
     public function connect()
     {
-        $driverOptions = $this->_options['driverOptions'];
-        $options = isset($driverOptions['options']) ? (array) $driverOptions['options'] : array();
+        $driverOptions = $this->getOptions()['driverOptions'];
 
         if (isset($driverOptions['dsn']) && is_string($driverOptions['dsn'])) {
             $dsn = $driverOptions['dsn'];

@@ -62,9 +62,11 @@ class QueueTest extends \PHPUnit_Framework_TestCase
 
         $this->options = new QueueOptions();
 
-        $this->adapter = new ArrayAdapter($this->options->getAdapterOptions());
+        $this->adapter = new ArrayAdapter();
 
-        $this->queue = new Queue($this->name, $this->adapter);
+        $this->queue = new Queue($this->name, $this->adapter, $this->options);
+
+        $this->queue->ensureQueue();
     }
 
     protected function tearDown()
@@ -72,24 +74,20 @@ class QueueTest extends \PHPUnit_Framework_TestCase
 
     }
 
-    public function testConstruct()
-    {
-        $obj = new Queue('queueTestConstruct', 'ArrayAdapter');
-        $this->assertTrue($obj instanceof Queue);
-    }
-
-    public function testGetConfig()
+    public function testSetGetConfig()
     {
         $this->assertTrue($this->options instanceof QueueOptions);
         $this->assertEquals($this->options, $this->queue->getOptions());
-        $this->assertTrue(is_array($this->options->getAdapterOptions()));
+
+        $options = new QueueOptions();
+
+        $this->assertTrue($this->queue->setOptions($options) instanceof Queue);
+        $this->assertEquals($options, $this->queue->getOptions());
     }
 
-    public function testSetGetAdapter()
+    public function testGetAdapter()
     {
-        $adapter = new ArrayAdapter($this->options->getAdapterOptions());
-        $this->assertTrue($this->queue->setAdapter($adapter) instanceof Queue);
-        $this->assertTrue($this->queue->getAdapter($adapter) instanceof ArrayAdapter);
+        $this->assertTrue($this->queue->getAdapter() instanceof ArrayAdapter);
     }
 
     public function testGetName()
@@ -195,7 +193,9 @@ class QueueTest extends \PHPUnit_Framework_TestCase
         }
 
         $queues = $this->queue->listQueues();
+
         $this->assertTrue(is_array($queues));
+
         $this->assertTrue(in_array($this->name, $queues));
     }
 }

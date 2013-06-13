@@ -32,13 +32,13 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
 
 
     /**
-     * User-provided options
+     * Default options
      *
      * @var array
      */
-    protected $_options = array(
-        self::SIZE          => self::DEFAULT_SIZE,
-        self::MAX_MESSAGES   => self::DEFAULT_MAX_MESSAGES,
+    protected $defaultOptions = array(
+        'size'          => self::DEFAULT_SIZE,
+        'maxMessages'   => self::DEFAULT_MAX_MESSAGES,
     );
 
 
@@ -50,7 +50,8 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
      */
     public function create($name)
     {
-        $this->_queues[$name] = $this->mongoDb->createCollection($name, true, $this->_options[self::SIZE], $this->_options[self::MAX_MESSAGES]);
+        $options = $this->getOptions();
+        $this->_queues[$name] = $this->mongoDb->createCollection($name, true, $options['size'], $options['maxMessages']);
 
         for($i=0; $i < 100; $i++){
             $this->_queues[$name]->insert(array(self::KEY_HANDLED => true));

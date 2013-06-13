@@ -67,9 +67,11 @@ class MessageTest extends \PHPUnit_Framework_TestCase
 
         $this->options = new QueueOptions();
 
-        $this->adapter = new ArrayAdapter($this->options->getAdapterOptions());
+        $this->adapter = new ArrayAdapter();
 
-        $this->queue = new Queue($this->name, $this->adapter);
+        $this->queue = new Queue($this->name, $this->adapter, $this->options);
+
+        $this->queue->ensureQueue();
 
         $this->message = new Message();
 

@@ -15,10 +15,6 @@ use Zend\Stdlib\AbstractOptions;
 class QueueOptions extends AbstractOptions
 {
 
-    protected $defaultQueueName = 'default';
-
-    protected $adapterNamespace = '\ZendQueue\Adapter';
-
     protected $driverOptions = array();
 
     protected $adapterOptions = array();
@@ -61,51 +57,6 @@ class QueueOptions extends AbstractOptions
      * @var int
      */
     protected $pollingInterval = 1;
-
-
-    public function setDefaultQueueName($name)
-    {
-        $this->defaultQueueName = (string) $name;
-        return $this;
-    }
-
-    public function getDefaultQueueName()
-    {
-        return $this->defaultQueueName;
-    }
-
-    public function setAdapterNamespace($namespace)
-    {
-        $this->adapterNamespace = (string) $namespace;
-        return $this;
-    }
-
-    public function getAdapterNamespace()
-    {
-        return $this->adapterNamespace;
-    }
-
-    public function setDriverOptions(array $options)
-    {
-        $this->driverOptions = $options;
-        return $this;
-    }
-
-    public function getDriverOptions()
-    {
-        return $this->driverOptions;
-    }
-
-    public function setAdapterOptions(array $options)
-    {
-        $this->adapterOptions = $options;
-        return $this;
-    }
-
-    public function getAdapterOptions()
-    {
-        return $this->adapterOptions;
-    }
 
     public function setMessageClass($class)
     {

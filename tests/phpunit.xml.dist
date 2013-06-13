@@ -3,25 +3,6 @@
         <testsuite name="ZendQueue Test Suite">
             <directory>ZendQueue/</directory>
 
-            <exclude>Adapter/ActivemqTest.php</exclude>
-<!--            <exclude>Adapter/ArrayTest.php</exclude>	-->
-            <exclude>Adapter/DBTest.php</exclude>
-<!--            <exclude>Adapter/NullTest.php</exclude>		-->
-
-            <exclude>Bugs/ZF-7650Test.php</exclude>
-
-<!--            <exclude>Message/MessageTest.php</exclude>          -->
-<!--             <exclude>Message/MessageIteratorTest.php</exclude> -->
-
-            <exclude>Stomp/ClientTest.php</exclude>
-            <exclude>Stomp/ConnectionTest.php</exclude>
-            <exclude>Stomp/FrameTest.php</exclude>
-
-            <exclude>CustomTest.php</exclude>
-            <exclude>FactoryTest.php</exclude>
-
-<!--            <exclude>QueueTest.php</exclude>			-->
-
         </testsuite>
     </testsuites>
 

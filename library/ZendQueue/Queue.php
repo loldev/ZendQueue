@@ -11,23 +11,18 @@
 namespace ZendQueue;
 
 use Countable;
-use Traversable;
-use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\Message;
 use ZendQueue\Exception;
 use ZendQueue\Adapter\AdapterInterface;
+use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
 use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
 use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
 use ZendQueue\Adapter\Capabilities\ScheduleMessageCapableInterface;
 use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Parameter\ReceiveParameters;
-use ZendQueue\Adapter\Capabilities\FilterMessageCapableInterface;
-use ZendQueue\Adapter\Capabilities\VisibilityTimeoutCapableInterface;
 use Zend\EventManager\EventManagerInterface;
 use Zend\EventManager\Event;
-use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
-use ZendQueue\Adapter\Null;
 
 /**
  *
@@ -48,6 +43,11 @@ class Queue implements Countable
     protected $adapter = null;
 
     /**
+     * @var bool
+     */
+    protected $adapterConnected = false;
+
+    /**
      * User-provided configuration
      *
      * @var QueueOptions
@@ -57,43 +57,37 @@ class Queue implements Countable
     /**
      * Constructor
      *
-     * Can be called as
-     * $queue = new Queue('default', $config);
-     * - or -
-     * $queue = new Queue('default', 'ArrayAdapter', $config);
-     * - or -
-     * $queue = new Queue('default', null, $config); // Queue->createQueue();
-     *
      * @param  string $name
-     * @param  string|AdapterInterface|array|Traversable|null $adapter
-     * @param  Traversable|array $options
+     * @param  AdapterInterface $adapter
+     * @param  QueueOptions $options
      * @throws Exception\InvalidArgumentException
      */
-    public function __construct($name, $adapter, $options = array())
+    public function __construct($name, AdapterInterface $adapter, QueueOptions $options = null)
     {
         if (empty($name)) {
             throw new Exception\InvalidArgumentException('No valid param $name passed to constructor: cannot be empty');
         }
+
         $this->name = $name;
 
-        $this->setOptions($options);
+        $this->adapter = $adapter;
 
-        $this->setAdapter($adapter);
+        if (null === $options) {
+            $options = new QueueOptions($options);
+        }
+
+        $this->setOptions($options);
     }
 
 
     /**
      * Set options
      *
-     * @param  array|\Traversable|QueueOptions $options
+     * @param  QueueOptions $options
      * @return Queue
      */
-    public function setOptions($options)
+    public function setOptions(QueueOptions $options)
     {
-        if (!$options instanceof QueueOptions) {
-            $options = new QueueOptions($options);
-        }
-
         $this->options = $options;
         return $this;
     }
@@ -121,44 +115,6 @@ class Queue implements Countable
         return $this->name;
     }
 
-
-    /**
-     * Set the adapter for this queue
-     *
-     * @param  string|AdapterInterface $adapter
-     * @return Queue Provides a fluent interface
-     * @throws Exception\InvalidArgumentException
-     */
-    public function setAdapter($adapter)
-    {
-        if (is_string($adapter)) {
-            $adapterName = $this->getOptions()->getAdapterNamespace() . '\\' . $adapter;
-
-            /*
-             * Create an instance of the adapter class.
-             * Pass the configuration to the adapter class constructor.
-             */
-            $options = $this->getOptions();
-            $adapter = new $adapterName(array('options' => $options->getAdapterOptions(), 'driverOptions' => $options->getDriverOptions() ));
-        }
-
-        if (($type = gettype($adapter)) != 'object') {
-            throw new Exception\InvalidArgumentException('$adapter must be a string or an object implementing \ZendQueue\Adapter\AdapterInterface. '.$type.' given.');
-        }
-
-        if (!$adapter instanceof AdapterInterface) {
-            throw new Exception\InvalidArgumentException("Adapter class ".get_class($adapter)." does not implement \ZendQueue\Adapter\AdapterInterface");
-        }
-
-        $this->adapter = $adapter;
-
-        if (! ($this->adapter instanceof Null)) {
-            $this->adapter->create($this->getName());
-        }
-
-        return $this;
-    }
-
     /**
      * Get the adapter for this queue
      *
@@ -166,6 +122,11 @@ class Queue implements Countable
      */
     public function getAdapter()
     {
+        //Ensure connection at first using
+        if (!$this->adapterConnected) {
+            $this->adapterConnected = $this->adapter->connect();
+        }
+
         return $this->adapter;
     }
 
@@ -208,7 +169,7 @@ class Queue implements Countable
         /**
          * @see Adapter\Null
          */
-        $this->setAdapter('Null');
+        $this->adapter = new Adapter\Null();
 
         return $deleted;
     }
@@ -491,11 +452,11 @@ class Queue implements Countable
     public function debugInfo()
     {
         $info = array();
-        $info['self']                     = get_called_class();
-        $info['adapter']                  = get_class($this->getAdapter());
-        $info['currentQueue']             = $this->getName();
-        $info['messageClass']             = $this->getOptions()->getMessageClass();
-        $info['messageSetClass']          = $this->getOptions()->getMessageSetClass();
+        $info['self']               = get_called_class();
+        $info['adapter']            = get_class($this->getAdapter());
+        $info['name']               = $this->getName();
+        $info['messageClass']       = $this->getOptions()->getMessageClass();
+        $info['messageSetClass']    = $this->getOptions()->getMessageSetClass();
 
         return $info;
     }
