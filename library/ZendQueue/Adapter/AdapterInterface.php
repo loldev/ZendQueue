@@ -10,7 +10,7 @@
 
 namespace ZendQueue\Adapter;
 
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Message\MessageIterator;
 use ZendQueue\Queue;
 use ZendQueue\Parameter\SendParameters;
@@ -107,13 +107,13 @@ interface AdapterInterface
      * Send a message to the queue
      *
      * @param  Queue $queue
-     * @param  Message $message Message to send to the active queue
+     * @param  MessageInterface $message Message to send to the active queue
      * @param  SendParameters $params
-     * @return bool
+     * @return MessageInterface
      * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException
      */
-    public function send(Queue $queue, Message $message, SendParameters $params = null);
+    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null);
 
     /**
      * Get messages from the queue

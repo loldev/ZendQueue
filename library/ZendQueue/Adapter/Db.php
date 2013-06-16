@@ -11,8 +11,7 @@
 namespace ZendQueue\Adapter;
 
 use Zend\Db as ZendDb;
-use Zend\Db\Sql\Sql;
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
@@ -38,22 +37,22 @@ class Db extends AbstractAdapter implements
      * @var array
      */
     protected $defaultOptions = array(
-        'queueTableName'     => 'queue',
-        'messageTableName'   => 'message'
+        'queueTable'     => 'queue',
+        'messageTable'   => 'message'
     );
 
     /**
-     * @var ZendDb\TableGateway\TableGateway
+     * @var ZendDb\TableGateway\TableGatewayInterface
      */
     protected $queueTable = null;
 
     /**
-     * @var ZendDb\TableGateway\TableGateway
+     * @var ZendDb\TableGateway\TableGatewayInterface
      */
     protected $messageTable = null;
 
     /**
-     * @var \Zend\Db\Adapter\Adapter
+     * @var ZendDb\Adapter\Adapter
      */
     protected $adapter= null;
 
@@ -96,8 +95,19 @@ class Db extends AbstractAdapter implements
             } else {
                 $this->adapter = new ZendDb\Adapter\Adapter($options['driverOptions']);
             }
-            $this->queueTable = new ZendDb\TableGateway\TableGateway($options['queueTableName'], $this->adapter);
-            $this->messageTable = new ZendDb\TableGateway\TableGateway($options['messageTableName'], $this->adapter);
+
+            if ($options['queueTable'] instanceof ZendDb\TableGateway\TableGatewayInterface) {
+                $this->queueTable = $options['queueTable'];
+            } else {
+                $this->queueTable = new ZendDb\TableGateway\TableGateway($options['queueTable'], $this->adapter);
+            }
+
+            if ($options['messageTable'] instanceof ZendDb\TableGateway\TableGatewayInterface) {
+                $this->messageTable = $options['messageTable'];
+            } else {
+                $this->messageTable = new ZendDb\TableGateway\TableGateway($options['messageTable'], $this->adapter);
+            }
+
         } catch (ZendDb\Exception\ExceptionInterface $e) {
             throw new Exception\ConnectionException('Error connecting to database: ' . $e->getMessage(), $e->getCode(), $e);
         }
@@ -105,11 +115,13 @@ class Db extends AbstractAdapter implements
         return true;
     }
 
-
     /********************************************************************
      * Queue management functions
      *********************************************************************/
 
+    /**
+     * @return array
+     */
     public function getAvailableSendParams()
     {
         return array(
@@ -119,6 +131,9 @@ class Db extends AbstractAdapter implements
         );
     }
 
+    /**
+     * @return array
+     */
     public function getAvailableReceiveParams()
     {
         return array(
@@ -213,13 +228,10 @@ class Db extends AbstractAdapter implements
     /**
      * Get an array of all available queues
      *
-     * Not all adapters support getQueues(), use isSupported('getQueues')
-     * to determine if the adapter supports this feature.
-     *
      * @return array
      * @throws Exception\ExceptionInterface - database error
      */
-    public function getQueues()
+    public function listQueues()
     {
         $result = $this->queueTable->select();
         foreach($result as $one) {
@@ -254,13 +266,13 @@ class Db extends AbstractAdapter implements
      * Send a message to the queue
      *
      * @param  Queue $queue
-     * @param  Message $message Message to send to the active queue
+     * @param  MessageInterface $message Message to send to the active queue
      * @param  SendParameters $params
-     * @return bool
+     * @return MessageInterface
      * @throws Exception\QueueNotFoundException
-     * @throws Exception\RuntimeException
+     * @throws Exception\RuntimeException - database error
      */
-    public function send(Queue $queue, Message $message, SendParameters $params = null)
+    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
 
         $this->_cleanMessageInfo($queue, $message);
@@ -292,16 +304,17 @@ class Db extends AbstractAdapter implements
 
         $this->_embedMessageInfo($queue, $message, $id, $params);
 
-        return true;
+        return $message;
     }
 
     /**
-     * Get messages in the queue
+     * Get messages from the queue
      *
      * @param  Queue $queue
      * @param  integer|null $maxMessages Maximum number of messages to return
      * @param  ReceiveParameters $params
-     * @return Message\MessageIterator
+     * @return MessageIterator
+     * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException - database error
      */
     public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
@@ -386,7 +399,6 @@ class Db extends AbstractAdapter implements
         return new $classname($msgs, $queue);
     }
 
-
     /**
      * Delete a message from the queue
      *
@@ -394,10 +406,12 @@ class Db extends AbstractAdapter implements
      * unsuccessful.
      *
      * @param  Queue $queue
-     * @param  Message $message
+     * @param  MessageInterface $message
      * @return boolean
+     * @throws Exception\QueueNotFoundException
+     * @throws Exception\RuntimeException - database error
      */
-    public function deleteMessage(Queue $queue, Message $message)
+    public function deleteMessage(Queue $queue, MessageInterface $message)
     {
         $info = $this->_extractMessageInfo($queue, $message);
 
@@ -410,11 +424,10 @@ class Db extends AbstractAdapter implements
         return false;
     }
 
-
-
     /********************************************************************
      * Functions that are not part of the \ZendQueue\Adapter\AdapterAbstract
      *********************************************************************/
+
     /**
      * Get the queue ID
      *
@@ -441,7 +454,5 @@ class Db extends AbstractAdapter implements
 
         return $this->_queues[$name];
     }
-
-
 
 }

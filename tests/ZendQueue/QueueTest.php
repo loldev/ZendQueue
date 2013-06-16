@@ -107,17 +107,17 @@ class QueueTest extends \PHPUnit_Framework_TestCase
         // parameter verification
         try {
             $this->queue->send(array());
-            $this->fail('send() $mesage must be a string or an instance of \ZendQueue\Message\Message');
+            $this->fail('send() $mesage must be a string or an instance of \Zend\Stdlib\MessageInterface');
         } catch (\Exception $e) {
             $this->assertTrue(true);
         }
 
         $message = 'Hello world';
-        $this->assertTrue($this->queue->send($message));
+        $this->assertInstanceOf('\Zend\Stdlib\MessageInterface', $this->queue->send($message));
 
         $message = new Message();
         $message->setContent('Hello world again');
-        $this->assertTrue($this->queue->send($message));
+        $this->assertEquals($message, $this->queue->send($message));
 
         // ------------------------------------ count()
         if ($this->queue->canCountMessages()) {

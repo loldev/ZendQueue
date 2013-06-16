@@ -10,21 +10,23 @@
 
 namespace ZendQueue\Adapter\Capabilities;
 
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Adapter\AdapterInterface;
+use ZendQueue\Exception;
 use ZendQueue\Queue;
 
 interface DeleteMessageCapableInterface extends AdapterInterface
 {
-     /**
+    /**
      * Delete a message from the queue
      *
      * Return true if the message is deleted, false if the deletion is
      * unsuccessful.
      *
      * @param  Queue $queue
-     * @param  Message $message
+     * @param  MessageInterface $message
      * @return boolean
+     * @throws Exception\QueueNotFoundException
      */
-    public function deleteMessage(Queue $queue, Message $message);
+    public function deleteMessage(Queue $queue, MessageInterface $message);
 }

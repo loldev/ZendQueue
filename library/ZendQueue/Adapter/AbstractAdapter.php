@@ -12,14 +12,13 @@ namespace ZendQueue\Adapter;
 
 use Traversable;
 use Zend\Stdlib\ArrayUtils;
+use Zend\Stdlib\MessageInterface;
+use Zend\Stdlib\ParametersInterface;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
-use ZendQueue\Message\Message;
-use Zend\Stdlib\ParameterObjectInterface;
-use Zend\Stdlib\Parameters;
 
 /**
- * Class for connecting to queues performing common operations.
+ * Abstract class for performing common operations.
  *
  */
 abstract class AbstractAdapter implements AdapterInterface
@@ -61,7 +60,6 @@ abstract class AbstractAdapter implements AdapterInterface
         $this->setOptions($options);
     }
 
-
     /**
      * Set options
      *
@@ -93,7 +91,7 @@ abstract class AbstractAdapter implements AdapterInterface
             }
         }
 
-        $this->_options = array_merge($this->_options, $options);
+        $this->_options = array_merge($this->defaultOptions, $options);
         $this->_options['driverOptions'] = $driverOptions;
 
         return $this;
@@ -109,7 +107,6 @@ abstract class AbstractAdapter implements AdapterInterface
         return $this->_options;
     }
 
-
     /**
      * List avaliable params for send()
      *
@@ -119,7 +116,6 @@ abstract class AbstractAdapter implements AdapterInterface
     {
         return array();
     }
-
 
     /**
      * List avaliable params for receive()
@@ -131,29 +127,50 @@ abstract class AbstractAdapter implements AdapterInterface
         return array();
     }
 
-
+    /**
+     * @param mixed $id
+     * @param Queue|string $queue
+     * @param ParametersInterface|array $options
+     * @return array
+     */
     protected function _buildMessageInfo($id, $queue, $options = null)
     {
         return array(
             'messageId' => $id,
             'queue'     => $queue instanceof Queue ? $queue->getName() : (string) $queue,
             'adapter'   => get_class($this),
-            'options'   => $options instanceof Parameters ? $options->toArray() : (array) $options,
+            'options'   => $options instanceof ParametersInterface ? $options->toArray() : (array) $options,
         );
     }
 
-
-    protected function _embedMessageInfo(Queue $queue, Message $message, $id, $options = null)
+    /**
+     * @param Queue $queue
+     * @param MessageInterface $message
+     * @param mixed $id
+     * @param ParametersInterface|array $options
+     * @return void
+     */
+    protected function _embedMessageInfo(Queue $queue, MessageInterface $message, $id, $options = null)
     {
         $message->setMetadata($queue->getOptions()->getMessageMetadatumKey(), $this->_buildMessageInfo($id, $queue, $options));
     }
 
-    protected function _extractMessageInfo(Queue $queue, Message $message)
+    /**
+     * @param Queue $queue
+     * @param MessageInterface $message
+     * @return array
+     */
+    protected function _extractMessageInfo(Queue $queue, MessageInterface $message)
     {
        return $message->getMetadata($queue->getOptions()->getMessageMetadatumKey());
     }
 
-    protected function _cleanMessageInfo(Queue $queue, Message $message)
+    /**
+     * @param Queue $queue
+     * @param MessageInterface $message
+     * @return void
+     */
+    protected function _cleanMessageInfo(Queue $queue, MessageInterface $message)
     {
         $metadatumKey = $queue->getOptions()->getMessageMetadatumKey();
         if ($message->getMetadata($metadatumKey, null)) {

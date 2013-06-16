@@ -14,5 +14,10 @@ use ZendQueue\Adapter\AdapterInterface;
 
 interface ListQueuesCapableInterface extends AdapterInterface
 {
-    public function getQueues();
+    /**
+     * Get an array of all available queues
+     *
+     * @return array
+     */
+    public function listQueues();
 }

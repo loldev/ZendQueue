@@ -13,7 +13,7 @@ namespace ZendQueue\Message;
 use Countable;
 use Iterator;
 use ZendQueue\Queue;
-use Zend\Stdlib\Message as StdMessage;
+use Zend\Stdlib\MessageInterface as StdMessage;
 
 /**
  *
@@ -94,7 +94,7 @@ class MessageIterator implements Countable, Iterator
             $data = $this->data[$index];
             $msgClass = isset($data['class']) ? $data['class'] : $this->messageClass;
 
-            /* @var $message \Zend\Stdlib\Message */
+            /* @var $message \Zend\Stdlib\MessageInterface */
             $message = new $msgClass;
 
             if (isset($data['content'])) {

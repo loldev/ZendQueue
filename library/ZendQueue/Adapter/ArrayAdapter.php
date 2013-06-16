@@ -16,7 +16,7 @@ use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
 use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Parameter\ReceiveParameters;
 use ZendQueue\QueueOptions;
 use Zend\Math\Rand;
@@ -104,7 +104,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      *
      * @return array
      */
-    public function getQueues()
+    public function listQueues()
     {
         return array_keys($this->_data);
     }
@@ -133,12 +133,12 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      * Send a message to the queue
      *
      * @param Queue $queue
-     * @param string $message
+     * @param MessageInterface $message
      * @param SendParameters $params
-     * @return boolean
+     * @return MessageInterface
      * @throws Exception\QueueNotFoundException
      */
-    public function send(Queue $queue, Message $message, SendParameters $params = null)
+    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
         if (!$this->isExists($queue->getName())) {
             throw new Exception\QueueNotFoundException('Queue does not exist: ' . $queue->getName());
@@ -167,7 +167,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
 
         $this->_embedMessageInfo($queue, $message, $messageId, $params);
 
-        return true;
+        return $message;
     }
 
     /**
@@ -217,14 +217,15 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
     /**
      * Delete a message from the queue
      *
-     * Returns true if the message is deleted, false if the deletion is unsuccessful.
+     * Return true if the message is deleted, false if the deletion is
+     * unsuccessful.
      *
-     * @param Queue $queue
-     * @param  Message $message
+     * @param  Queue $queue
+     * @param  MessageInterface $message
      * @return boolean
-     * @throws Exception\ExceptionInterface
+     * @throws Exception\QueueNotFoundException
      */
-    public function deleteMessage(Queue $queue, Message $message)
+    public function deleteMessage(Queue $queue, MessageInterface $message)
     {
         if (!$this->isExists($queue->getName())) {
         	throw new Exception\QueueNotFoundException('Queue does not exist:' . $queue->getName());

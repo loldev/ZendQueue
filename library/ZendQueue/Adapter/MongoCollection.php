@@ -10,7 +10,7 @@
 
 namespace ZendQueue\Adapter;
 
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
 use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
@@ -21,9 +21,6 @@ use ZendQueue\Adapter\Mongo\AbstractMongo;
 
 class MongoCollection extends AbstractMongo implements DeleteMessageCapableInterface
 {
-
-
-
     /**
      * Delete a message from the queue
      *
@@ -31,10 +28,11 @@ class MongoCollection extends AbstractMongo implements DeleteMessageCapableInter
      * unsuccessful.
      *
      * @param  Queue $queue
-     * @param  Message $message
+     * @param  MessageInterface $message
      * @return boolean
+     * @throws Exception\QueueNotFoundException
      */
-    public function deleteMessage(Queue $queue, Message $message) {
+    public function deleteMessage(Queue $queue, MessageInterface $message) {
 
         $info = $this->_extractMessageInfo($queue, $message);
 
@@ -48,6 +46,4 @@ class MongoCollection extends AbstractMongo implements DeleteMessageCapableInter
 
         return false;
     }
-
-
 }

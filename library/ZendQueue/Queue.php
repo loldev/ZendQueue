@@ -11,7 +11,7 @@
 namespace ZendQueue;
 
 use Countable;
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Exception;
 use ZendQueue\Adapter\AdapterInterface;
 use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
@@ -122,7 +122,6 @@ class Queue implements Countable
         return new self($cfg['name'], $adapter, $options);
     }
 
-
     /**
      * Set options
      *
@@ -175,7 +174,7 @@ class Queue implements Countable
 
 
     /**
-     * Ensure that this queue exist
+     * Ensure that this queue exists
      *
      * @return bool
      * @throws Exception\InvalidArgumentException
@@ -217,18 +216,17 @@ class Queue implements Countable
         return $deleted;
     }
 
-
     /**
      * Send a message to the queue
      *
      * @param  mixed $message message
      * @param  SendParamters $params
-     * @return bool
+     * @return MessageInterface
      * @throws Exception\ExceptionInterface
      */
     public function send($message, SendParameters $params = null)
     {
-        if (!($message instanceof Message)) {
+        if (!($message instanceof MessageInterface)) {
             $data = $message;
             $messageClass = $this->getOptions()->getMessageClass();
             if (is_string($data)) {
@@ -256,7 +254,7 @@ class Queue implements Countable
      * @param  int $schedule
      * @param  int $interval
      * @param  SendParamters $params
-     * @return bool
+     * @return MessageInterface
      * @throws Exception\UnsupportedMethodCallException
      */
     public function schedule($message, $schedule = null, $interval = null, SendParameters $params = null)
@@ -298,20 +296,19 @@ class Queue implements Countable
         return $this->getAdapter()->receive($this, $maxMessages, $params);
     }
 
-
     /**
      * Await messages
      *
      * @param  ReceiveParameters $params
      * @param  mixed $eventManagerOrClosure
-     * @return Message
+     * @return MessageInterface
      * @throws Exception\InvalidArgumentException
      */
     public function await(ReceiveParameters $params = null, $eventManagerOrClosure = null)
     {
 
         if ($eventManagerOrClosure instanceof EventManagerInterface) {
-            $closure = function(Message $message) use($eventManagerOrClosure) {
+            $closure = function(MessageInterface $message) use($eventManagerOrClosure) {
                 $event = new Event();
                 $event->setParam('message', $message);
                 return !$eventManagerOrClosure->trigger($event)->stopped();
@@ -319,7 +316,9 @@ class Queue implements Countable
         } elseif ($eventManagerOrClosure instanceof \Closure) {
             $closure = $eventManagerOrClosure;
         } elseif ($eventManagerOrClosure === null) {
-            $closure = null;
+            $closure = function(MessageInterface $message) {
+                return false; //short circuit: when a message arrives, the loop ends and the message will be returned directly
+            };
         } else {
             throw new Exception\InvalidArgumentException('Invalid $eventManagerOrClosure type: must be EventManagerInterface, Closure or null.');
         }
@@ -377,11 +376,11 @@ class Queue implements Countable
      * unsuccessful.
      *
      *
-     * @param  Message $message
+     * @param  MessageInterface $message
      * @return boolean
      * @throws Exception\UnsupportedMethodCallException
      */
-    public function deleteMessage(Message $message)
+    public function deleteMessage(MessageInterface $message)
     {
         if (!$this->canDeleteMessage()) {
             throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
@@ -402,7 +401,7 @@ class Queue implements Countable
             throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
         }
 
-        return $this->getAdapter()->getQueues();
+        return $this->getAdapter()->listQueues();
     }
 
 

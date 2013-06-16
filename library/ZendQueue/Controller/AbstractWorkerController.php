@@ -14,7 +14,7 @@ use Zend\Mvc\Controller\AbstractController;
 use Zend\Mvc\MvcEvent;
 use Zend\Http\Request;
 use Zend\Http\Client;
-use Zend\Stdlib\Message;
+use Zend\Stdlib\MessageInterface;
 use Zend\Serializer\Adapter\AdapterInterface as SerializerAdapter;
 use Zend\Serializer\Serializer;
 use Zend\View\Model\ConsoleModel;
@@ -129,11 +129,11 @@ abstract class AbstractWorkerController extends AbstractController
     /**
      * Execute a job
      *
-     * @param Message $message
+     * @param MessageInterface $message
      * @return mixed
      * @throws Exception\InvalidMessageException
      */
-    public function execute(Message $message)
+    public function execute(MessageInterface $message)
     {
         switch (true) {
 
@@ -165,7 +165,7 @@ abstract class AbstractWorkerController extends AbstractController
     {
         $this->await = true;
 
-        $handler = function(Message $message) {
+        $handler = function(MessageInterface $message) {
             $this->execute($message);
             return $this->await;
         };

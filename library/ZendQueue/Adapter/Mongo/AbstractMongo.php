@@ -10,14 +10,13 @@
 
 namespace ZendQueue\Adapter\Mongo;
 
+use Zend\Stdlib\MessageInterface;
 use ZendQueue\Adapter\AbstractAdapter;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
-use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
 use ZendQueue\Exception;
 use ZendQueue\Queue;
 use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Parameter\ReceiveParameters;
-use Zend\Stdlib\Message;
 
 abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCapableInterface
 {
@@ -68,9 +67,12 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
         return true;
     }
 
-    /* (non-PHPdoc)
-     * @see \ZendQueue\Adapter\AdapterInterface::create()
-    */
+    /**
+     * Create a new queue
+     *
+     * @param  string  $name Queue name
+     * @return boolean
+     */
     public function create($name)
     {
         $this->_queues[$name] = $this->mongoDb->createCollection($name);
@@ -110,18 +112,17 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
         return false;
     }
 
-
     /**
      * Send a message to the queue
      *
      * @param  Queue $queue
-     * @param  Message $message Message to send to the active queue
+     * @param  MessageInterface $message Message to send to the active queue
      * @param  SendParameters $params
-     * @return bool
+     * @return MessageInterface
      * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException
      */
-    public function send(Queue $queue, Message $message, SendParameters $params = null)
+    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
         $this->_cleanMessageInfo($queue, $message);
 
@@ -144,7 +145,7 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
 
         $this->_embedMessageInfo($queue, $message, $id, $params ? $params->toArray() : array());
 
-        return true;
+        return $message;
     }
 
     protected function _setupCursor(\MongoCollection $collection, ReceiveParameters $params = null,
@@ -222,7 +223,6 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
 
     /**
      * Returns the approximate number of messages in the queue
-     *
      *
      * @return integer
      */
