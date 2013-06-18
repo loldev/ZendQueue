@@ -58,7 +58,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      * @param string $name
      * @return boolean
      */
-    public function isExists($name)
+    public function isQueueExist($name)
     {
         return array_key_exists($name, $this->_data);
     }
@@ -69,9 +69,9 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      * @param string $name queue name
      * @return boolean
      */
-    public function create($name)
+    public function createQueue($name)
     {
-        if ($this->isExists($name)) {
+        if ($this->isQueueExist($name)) {
             return false;
         }
 
@@ -88,7 +88,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      * @param string $name queue name
      * @return boolean
      */
-    public function delete($name)
+    public function deleteQueue($name)
     {
         $found = isset($this->_data[$name]);
 
@@ -138,9 +138,9 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      * @return MessageInterface
      * @throws Exception\QueueNotFoundException
      */
-    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
+    public function sendMessage(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
-        if (!$this->isExists($queue->getName())) {
+        if (!$this->isQueueExist($queue->getName())) {
             throw new Exception\QueueNotFoundException('Queue does not exist: ' . $queue->getName());
         }
 
@@ -178,7 +178,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      * @param ReceiveParameters $params
      * @return Message\MessageIterator
      */
-    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
+    public function receiveMessages(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
     {
         if ($maxMessages === null) {
             $maxMessages = 1;
@@ -227,7 +227,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      */
     public function deleteMessage(Queue $queue, MessageInterface $message)
     {
-        if (!$this->isExists($queue->getName())) {
+        if (!$this->isQueueExist($queue->getName())) {
         	throw new Exception\QueueNotFoundException('Queue does not exist:' . $queue->getName());
         }
 

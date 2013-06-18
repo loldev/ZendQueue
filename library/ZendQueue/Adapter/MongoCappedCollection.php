@@ -19,8 +19,9 @@ use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
 use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Parameter\ReceiveParameters;
 use ZendQueue\Adapter\Mongo\AbstractMongo;
+use ZendQueue\Adapter\Capabilities\AwaitMessagesCapableInterface;
 
-class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterface
+class MongoCappedCollection extends AbstractMongo implements AwaitMessagesCapableInterface
 {
 
     /**
@@ -40,7 +41,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
      * @param  string  $name Queue name
      * @return boolean
      */
-    public function create($name)
+    public function createQueue($name)
     {
         $options = $this->getOptions();
         $this->_queues[$name] = $this->mongoDb->createCollection($name, true, $options['size'], $options['maxMessages']);
@@ -57,13 +58,12 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
      * @param  string $name Queue name
      * @return boolean
      */
-    public function isExists($name)
+    public function isQueueExist($name)
     {
         $collection = $this->mongoDb->selectCollection($name);
         $result = $collection->validate();
         return (isset($result['capped']) && $collection->count() > 0) ? true : false;
     }
-
 
     /**
      * Send a message to the queue
@@ -75,11 +75,9 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
      * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException
      */
-    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
+    public function sendMessage(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
         $options = $this->getOptions();
-
-        var_dump($options);
 
         $this->_cleanMessageInfo($queue, $message);
 
@@ -110,7 +108,6 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
         return $message;
     }
 
-
     /**
      * Await for messages in the queue and receive them
      *
@@ -120,7 +117,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
      * @return MessageInterface
      * @throws Exception\RuntimeException
      */
-    public function await(Queue $queue, \Closure $callback = null, ReceiveParameters $params = null)
+    public function awaitMessages(Queue $queue, \Closure $callback = null, ReceiveParameters $params = null)
     {
         $classname = $queue->getOptions()->getMessageSetClass();
         $collection = $this->mongoDb->selectCollection($queue->getName());
@@ -144,8 +141,10 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
              *   we shouldn't start reading from the beginnig of the collection, so we get the second-last document position
              *   then we setup the query to start from the next position.
              *
-             * The tailable cursor will start from the last document always.
+             * Therefore tailable cursor will start from the last document always.
              *
+             * Inspired by
+             * @link http://shtylman.com/post/the-tail-of-mongodb/
              *
              */
 
@@ -155,7 +154,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
             $secondLast = $cursor->getNext();
 
             if (!$secondLast) {
-                throw new Exception\RuntimeException('Cannot get second last position, maybe there are not enough documents within the collection');
+                throw new Exception\RuntimeException('Cannot get second-last position, maybe there are not enough documents within the collection');
             }
 
             //Setup tailable cursor
@@ -166,9 +165,9 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
             //Inner loop: read results and wait for more
             while (true) {
 
-                //If we are at the end of the data, $cursor->hasNext() blocks execution for a while,
-                //after a timeout period or if cursor is dead then it does return as normal.
-                //So, we don't need sleeping because at beginning of each loop, hasNext() will await
+                //We don't need sleeping because at beginning of each loop hasNext() will await.
+                //If we are at the end of results, hasNext() blocks execution for a while,
+                //after a timeout period (or if cursor dies) it does return as normal.
                 if (!$cursor->hasNext()) {
 
                     // is cursor dead ?
@@ -176,7 +175,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
                         //TODO: if we get a dead cursor repeatedly, an infinte loop or a temporary CPU high load may occur
                         break; //go to the outer loop, obtaining a new cursor
                     }
-                    //else, we red all results so far, wait for more
+                    //else, we read all results so far, wait for more
 
                 } else {
 
@@ -187,7 +186,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
                         continue; //inner loop
                     }
 
-                    //we got a non-handled message, try to receive it
+                    //we got the _id of a non-handled message, try to receive it
                     $msg = $this->_receiveMessageAtomic($queue, $collection, $msg['_id']);
 
                     //if meanwhile message has been handled already then we ignore it
@@ -195,7 +194,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitCapableInterfa
                         continue; //inner loop
                     }
 
-                    //Ok, we got a message
+                    //Ok, message received
                     $iterator = new $classname(array($msg), $queue);
                     $message = $iterator->current();
 

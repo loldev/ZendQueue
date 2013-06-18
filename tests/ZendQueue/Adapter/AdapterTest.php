@@ -323,11 +323,11 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         }
 
         if ($this->adapterHasSupport($adapter, array('getQueues', 'isExists'))) {
-            $this->assertTrue($adapter->isExists($queue->getName()));
+            $this->assertTrue($adapter->isQueueExist($queue->getName()));
         }
 
         // cannot recreate a queue.
-        $this->assertFalse($adapter->create($queue->getName()));
+        $this->assertFalse($adapter->createQueue($queue->getName()));
 
         // delete the queue we created
         $queue->deleteQueue();
@@ -348,8 +348,8 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         }
 
         $new = $this->createQueueName(__FUNCTION__ . '_2');
-        $this->assertTrue($adapter->create($new));
-        $this->assertTrue($adapter->delete($new));
+        $this->assertTrue($adapter->createQueue($new));
+        $this->assertTrue($adapter->deleteQueue($new));
 
         if ($this->adapterHasSupport($adapter, 'getQueues')) {
             if (in_array($new, $adapter->getQueues())) {
@@ -375,12 +375,12 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
             return;
         }
 
-        $this->assertFalse($adapter->isExists('perl'));
+        $this->assertFalse($adapter->isQueueExist('perl'));
 
         $new = $this->createQueueName(__FUNCTION__ . '_3');
-        $this->assertTrue($adapter->create($new));
-        $this->assertTrue($adapter->isExists($new));
-        $this->assertTrue($adapter->delete($new));
+        $this->assertTrue($adapter->createQueue($new));
+        $this->assertTrue($adapter->isQueueExist($new));
+        $this->assertTrue($adapter->deleteQueue($new));
 
         if ($this->adapterHasSupport($adapter, 'getQueues')) {
             if (in_array($new, $adapter->getQueues())) {
@@ -410,14 +410,14 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $message = new Message();
         $message->setContent($body);
 
-        if (!$adapter->send($queue, $message)) {
+        if (!$adapter->sendMessage($queue, $message)) {
             $this->fail('send() failed');
         }
 
         // receive the record we created.
         if ($this->adapterHasSupport($adapter, 'receive')) {
             /* @var MessageIterator $messages */
-            $messages = $adapter->receive($queue);
+            $messages = $adapter->receiveMessages($queue);
             foreach ($messages as $message) {
                 $this->assertTrue($message instanceof Message);
                 $queue->deleteMessage($message);
@@ -446,13 +446,13 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $body = 'this is a test message 2';
         $message = new Message();
         $message->setContent($body);
-        if (!$adapter->send($queue, $message)) {
+        if (!$adapter->sendMessage($queue, $message)) {
         	$this->fail('send() failed');
         }
         $this->assertTrue($message instanceof Message);
 
         // get it back
-        $messages = $adapter->receive($queue, 1);
+        $messages = $adapter->receiveMessages($queue, 1);
         $this->assertTrue($messages instanceof MessageIterator);
         $this->assertEquals(1, $messages->count());
         $this->assertTrue($messages->valid());
@@ -492,12 +492,12 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $body = 'this is a test message';
         $message = new Message();
         $message->setContent($body);
-        if (!$adapter->send($queue, $message)) {
+        if (!$adapter->sendMessage($queue, $message)) {
         	$this->fail('send() failed');
         }
         $this->assertTrue($message instanceof Message);
 
-        $messages = $adapter->receive($queue);
+        $messages = $adapter->receiveMessages($queue);
         $this->assertTrue($messages instanceof MessageIterator);
         $this->assertTrue($messages->valid());
 
@@ -539,7 +539,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
 
         // make sure our current queue is in this list.
         if ($this->adapterHasSupport($adapter, 'isExists')) {
-            $this->assertTrue($adapter->isExists($queue->getName()));
+            $this->assertTrue($adapter->isQueueExist($queue->getName()));
         }
 
         // delete the queue we created
@@ -571,7 +571,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         // send a message
         $message = new Message();
         $message->setContent($body);
-        if (!$adapter->send($queue, $message)) {
+        if (!$adapter->sendMessage($queue, $message)) {
             $this->fail('send() failed');
         }
 
@@ -579,7 +579,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($adapter->countMessages($queue), 1);
 
         // receive the message
-        $message = $adapter->receive($queue);
+        $message = $adapter->receiveMessages($queue);
 
         /* we need to delete the messages we put in the queue before
          * counting.
@@ -755,7 +755,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $queue->send('My Test Message 1');
         $queue->send('My Test Message 2');
 
-        $messages = $adapter->receive($queue, 0);
+        $messages = $adapter->receiveMessages($queue, 0);
         $this->assertEquals(0, count($messages));
     }
 

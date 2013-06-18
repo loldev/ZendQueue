@@ -11,11 +11,7 @@
 namespace ZendQueue\Adapter;
 
 use Zend\Stdlib\MessageInterface;
-use ZendQueue\Exception;
 use ZendQueue\Queue;
-use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
-use ZendQueue\Parameter\SendParameters;
-use ZendQueue\Parameter\ReceiveParameters;
 use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
 use ZendQueue\Adapter\Mongo\AbstractMongo;
 

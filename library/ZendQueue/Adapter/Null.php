@@ -39,7 +39,7 @@ class Null extends AbstractAdapter
      * @param  string $name Queue name
      * @return bool
     */
-    public function isExists($name)
+    public function isQueueExist($name)
     {
         return false;
     }
@@ -50,7 +50,7 @@ class Null extends AbstractAdapter
      * @param  string  $name Queue name
      * @throws Exception\UnsupportedMethodCallException - queue disabled
     */
-    public function create($name)
+    public function createQueue($name)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
@@ -63,7 +63,7 @@ class Null extends AbstractAdapter
      * @param  string $name Queue name
      * @throws Exception\UnsupportedMethodCallException - queue disabled
     */
-    public function delete($name)
+    public function deleteQueue($name)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
@@ -80,7 +80,7 @@ class Null extends AbstractAdapter
      * @param  SendParameters $params
      * @throws Exception\UnsupportedMethodCallException - queue disabled
     */
-    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
+    public function sendMessage(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }
@@ -93,7 +93,7 @@ class Null extends AbstractAdapter
      * @param  ReceiveParameters $params
      * @throws Exception\UnsupportedMethodCallException - queue disabled
      */
-    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
+    public function receiveMessages(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
     {
         throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_called_class());
     }

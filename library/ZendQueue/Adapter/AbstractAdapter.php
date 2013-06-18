@@ -108,7 +108,7 @@ abstract class AbstractAdapter implements AdapterInterface
     }
 
     /**
-     * List avaliable params for send()
+     * List avaliable params for sendMessage()
      *
      * @return array
      */
@@ -118,7 +118,7 @@ abstract class AbstractAdapter implements AdapterInterface
     }
 
     /**
-     * List avaliable params for receive()
+     * List avaliable params for receiveMessages()
      *
      * @return array
      */

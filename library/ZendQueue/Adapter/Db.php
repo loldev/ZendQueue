@@ -146,15 +146,10 @@ class Db extends AbstractAdapter implements
     /**
      * Does a queue already exist?
      *
-     * Throws an exception if the adapter cannot determine if a queue exists.
-     * use isSupported('isExists') to determine if an adapter can test for
-     * queue existance.
-     *
      * @param  string $name
      * @return boolean
-     * @throws Exception\ExceptionInterface
      */
-    public function isExists($name)
+    public function isQueueExist($name)
     {
         $id = 0;
 
@@ -174,9 +169,9 @@ class Db extends AbstractAdapter implements
      * @return boolean
      * @throws Exception\RuntimeException - database error
      */
-    public function create($name)
+    public function createQueue($name)
     {
-        if ($this->isExists($name)) {
+        if ($this->isQueueExist($name)) {
             return false;
         }
 
@@ -202,7 +197,7 @@ class Db extends AbstractAdapter implements
      * @return boolean
      * @throws Exception\RuntimeException - database error
      */
-    public function delete($name)
+    public function deleteQueue($name)
     {
         $id = $this->getQueueId($name); // get primary key
 
@@ -272,7 +267,7 @@ class Db extends AbstractAdapter implements
      * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException - database error
      */
-    public function send(Queue $queue, MessageInterface $message, SendParameters $params = null)
+    public function sendMessage(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
 
         $this->_cleanMessageInfo($queue, $message);
@@ -317,7 +312,7 @@ class Db extends AbstractAdapter implements
      * @throws Exception\QueueNotFoundException
      * @throws Exception\RuntimeException - database error
      */
-    public function receive(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
+    public function receiveMessages(Queue $queue, $maxMessages = null, ReceiveParameters $params = null)
     {
         if ($maxMessages === null) {
             $maxMessages = 1;

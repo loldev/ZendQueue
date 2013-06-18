@@ -11,14 +11,15 @@
 namespace ZendQueue;
 
 use Countable;
+use Traversable;
+use Zend\Stdlib\ArrayUtils;
 use Zend\Stdlib\MessageInterface;
 use ZendQueue\Exception;
 use ZendQueue\Adapter\AdapterInterface;
-use ZendQueue\Adapter\Capabilities\AwaitCapableInterface;
+use ZendQueue\Adapter\Capabilities\AwaitMessagesCapableInterface;
 use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
 use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
-use ZendQueue\Adapter\Capabilities\ScheduleMessageCapableInterface;
 use ZendQueue\Parameter\SendParameters;
 use ZendQueue\Parameter\ReceiveParameters;
 use Zend\EventManager\EventManagerInterface;
@@ -119,7 +120,7 @@ class Queue implements Countable
             $options = new QueueOptions($cfg['options']);
         }
 
-        return new self($cfg['name'], $adapter, $options);
+        return new static($cfg['name'], $adapter, $options);
     }
 
     /**
@@ -182,11 +183,11 @@ class Queue implements Countable
     public function ensureQueue()
     {
         $name = $this->getName();
-        if($this->getAdapter()->isExists($name)) {
+        if($this->getAdapter()->isQueueExist($name)) {
             return true;
         }
 
-        return $this->getAdapter()->create($name);
+        return $this->getAdapter()->createQueue($name);
     }
 
     /**
@@ -204,8 +205,8 @@ class Queue implements Countable
 
         $deleted = false;
 
-        if($adapter->isExists($name)) {
-            $deleted = $adapter->delete($name);
+        if($adapter->isQueueExist($name)) {
+            $deleted = $adapter->deleteQueue($name);
         }
 
         /**
@@ -243,7 +244,7 @@ class Queue implements Countable
             }
         }
 
-        return $this->getAdapter()->send($this, $message, $params);
+        return $this->getAdapter()->sendMessage($this, $message, $params);
     }
 
 
@@ -293,7 +294,7 @@ class Queue implements Countable
             throw new Exception\InvalidArgumentException('$maxMessages must be an integer greater than 0 or null');
         }
 
-        return $this->getAdapter()->receive($this, $maxMessages, $params);
+        return $this->getAdapter()->receiveMessages($this, $maxMessages, $params);
     }
 
     /**
@@ -324,8 +325,8 @@ class Queue implements Countable
         }
 
         //the adpater support await?
-        if ($this->getAdapter() instanceof AwaitCapableInterface) {
-            return $this->getAdapter()->await($this, $closure, $params);
+        if ($this->getAdapter() instanceof AwaitMessagesCapableInterface) {
+            return $this->getAdapter()->awaitMessages($this, $closure, $params);
         }
 
         //can emulate await?
@@ -432,7 +433,7 @@ class Queue implements Countable
      */
     public function canAwait()
     {
-        return ($this->getAdapter() instanceof AwaitCapableInterface) || $this->getOptions()->getEnableAwaitEmulation();
+        return ($this->getAdapter() instanceof AwaitMessagesCapableInterface) || $this->getOptions()->getEnableAwaitEmulation();
     }
 
     /**
@@ -444,7 +445,7 @@ class Queue implements Countable
      */
     public function isAwaitEmulation()
     {
-        return !($this->getAdapter() instanceof AwaitCapableInterface) && $this->getOptions()->getEnableAwaitEmulation();
+        return !($this->getAdapter() instanceof AwaitMessagesCapableInterface) && $this->getOptions()->getEnableAwaitEmulation();
     }
 
     /**

@@ -14,7 +14,7 @@ use ZendQueue\Adapter\AdapterInterface;
 use ZendQueue\Parameter\ReceiveParameters;
 use ZendQueue\Queue;
 
-interface AwaitCapableInterface extends AdapterInterface
+interface AwaitMessagesCapableInterface extends AdapterInterface
 {
     /**
      * Await for messages in the queue and receive them
@@ -25,5 +25,5 @@ interface AwaitCapableInterface extends AdapterInterface
      * @return MessageInterface
      * @throws Exception\RuntimeException
      */
-     public function await(Queue $queue, \Closure $callback = null, ReceiveParameters $params = null);
+     public function awaitMessages(Queue $queue, \Closure $callback = null, ReceiveParameters $params = null);
 }
