@@ -15,10 +15,6 @@
     },
     "repositories": [
         {
-            "type": "composer",
-            "url": "http://packages.zendframework.com/"
-        },
-        {
             "type": "vcs",
             "url": "https://github.com/pruno/phpunit"
         }
