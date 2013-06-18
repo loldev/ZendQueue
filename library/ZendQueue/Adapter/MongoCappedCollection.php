@@ -146,6 +146,8 @@ class MongoCappedCollection extends AbstractMongo implements AwaitMessagesCapabl
              * Inspired by
              * @link http://shtylman.com/post/the-tail-of-mongodb/
              *
+             * @FIXME: classFilter isn't yet supported here
+             *
              */
 
             //Obtain the second last position
@@ -158,7 +160,7 @@ class MongoCappedCollection extends AbstractMongo implements AwaitMessagesCapabl
             }
 
             //Setup tailable cursor
-            $cursor = $this->_setupCursor($collection, $params, array('_id' => array('$gt' => $secondLast['_id'])), array('_id', self::KEY_HANDLED));
+            $cursor = $this->_setupCursor($collection, null, array('_id' => array('$gt' => $secondLast['_id'])), array('_id', self::KEY_HANDLED));
             $cursor->tailable(true);
             $cursor->awaitData(true);
 

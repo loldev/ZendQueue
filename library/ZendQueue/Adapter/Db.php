@@ -137,8 +137,8 @@ class Db extends AbstractAdapter implements
     public function getAvailableReceiveParams()
     {
         return array(
-          ReceiveParameters::MSG_CLASS,
-          ReceiveParameters::TIMEOUT,
+          ReceiveParameters::CLASS_FILTER,
+          ReceiveParameters::VISIBILITY_TIMEOUT,
         );
     }
 
@@ -318,8 +318,8 @@ class Db extends AbstractAdapter implements
             $maxMessages = 1;
         }
 
-        $timeout   = $params ? $params->getTimeout() : null;
-        $class     = $params ? $params->getMessageClass() : null;
+        $timeout   = $params ? $params->getVisibilityTimeout() : null;
+        $filter     = $params ? $params->getClassFilter() : null;
         $msgs      = array();
         $name      = $this->messageTable->table;
         $microtime = (int) microtime(true); // cache microtime
@@ -342,8 +342,8 @@ class Db extends AbstractAdapter implements
                     $timeout ? '(handle IS NULL OR timeout+' . $timeout . ' < ' . $microtime.')' : 'handle IS NULL',
                 );
 
-                if ($class) {
-                    $where['class'] = (string) $class;
+                if ($filter) {
+                    $where['class'] = (string) $filter;
                 }
 
                 $select->where($where);

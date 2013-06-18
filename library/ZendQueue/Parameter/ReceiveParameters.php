@@ -15,19 +15,41 @@ use Zend\Stdlib\Parameters;
 class ReceiveParameters extends Parameters
 {
 
-    const MSG_CLASS = 'class';
-    const TIMEOUT  = 'timeout';
+    const CLASS_FILTER = 'classFilter';
+    const VISIBILITY_TIMEOUT  = 'timeout';
 
 
-    public function setMessageClass($class)
+    /**
+     * Set the class filter
+     *
+     * Filter (receive) only message of the given class name.
+     *
+     * @param string $classname
+     * @return \ZendQueue\Parameter\ReceiveParameters
+     */
+    public function setClassFilter($classname = null)
     {
-        $this->set(self::MSG_CLASS, $class);
+        if (($classname !== null) && !is_string($classname)) {
+            throw new Exception\InvalidArgumentException('$classname must be a string or null');
+        }
+
+        //FIXME: temporary workaround to avoid absolute FQCN
+        $classname = ltrim($classname, '\\');
+
+        $this->set(self::CLASS_FILTER, $classname);
         return $this;
     }
 
-    public function getMessageClass()
+    /**
+     * Get the class filter
+     *
+     * @see setVisibilityTimeout()
+     *
+     * @return string|null
+     */
+    public function getClassFilter()
     {
-        return $this->get(self::MSG_CLASS, null);
+        return $this->get(self::CLASS_FILTER, null);
     }
 
     /**
@@ -43,19 +65,26 @@ class ReceiveParameters extends Parameters
      * @throws Exception\InvalidArgumentException
      * @return \ZendQueue\Parameter\ReceiveParameters
      */
-    public function setTimeout($timeout)
+    public function setVisibilityTimeout($timeout = null)
     {
         if (($timeout !== null) && !is_integer($timeout)) {
             throw new Exception\InvalidArgumentException('$timeout must be an integer or null');
         }
 
-        $this->set(self::TIMEOUT, $timeout);
+        $this->set(self::VISIBILITY_TIMEOUT, $timeout);
         return $this;
     }
 
-    public function getTimeout()
+    /**
+     * Get the visibility timeout
+     *
+     * @see setVisibilityTimeout()
+     *
+     * @return int|null
+     */
+    public function getVisibilityTimeout()
     {
-        return $this->get(self::TIMEOUT, null);
+        return $this->get(self::VISIBILITY_TIMEOUT, null);
     }
 
 

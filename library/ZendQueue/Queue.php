@@ -252,21 +252,21 @@ class Queue implements Countable
      * Schedule a message to the queue
      *
      * @param  mixed $message message
-     * @param  int $schedule
-     * @param  int $interval
+     * @param  int $scheduleTime
+     * @param  int $repeatingInterval
      * @param  SendParamters $params
      * @return MessageInterface
      * @throws Exception\UnsupportedMethodCallException
      */
-    public function schedule($message, $schedule = null, $interval = null, SendParameters $params = null)
+    public function schedule($message, $scheduleTime = null, $repeatingInterval = null, SendParameters $params = null)
     {
         if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
-            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
+            throw new Exception\UnsupportedMethodCallException('\''.SendParameters::SCHEDULE.'\' param is not supported by ' . get_class($this->getAdapter()));
         }
 
-        if ($interval !== null && !$this->isSendParamSupported(SendParameters::INTERVAL)) {
-            if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
-                throw new Exception\UnsupportedMethodCallException('\'interval\' param is not supported by ' . get_class($this->getAdapter()));
+        if ($interval !== null && !$this->isSendParamSupported(SendParameters::REPEATING_INTERVAL)) {
+            if (!$this->isSendParamSupported(SendParameters::REPEATING_INTERVAL)) {
+                throw new Exception\UnsupportedMethodCallException('\''.SendParameters::REPEATING_INTERVAL.'\' param is not supported by ' . get_class($this->getAdapter()));
             }
 
         }
@@ -275,7 +275,8 @@ class Queue implements Countable
             $params = new SendParameters();
         }
 
-        $params->setScheduling($schedule, $interval);
+        $params->setSchedule($scheduleTime)
+               ->setRepeatingInterval($repeatingInterval);
 
         return $this->send($message, $params);
     }
@@ -412,12 +413,12 @@ class Queue implements Countable
 
     public function isSendParamSupported($name)
     {
-        return in_array(strtolower($name), $this->getAdapter()->getAvailableSendParams());
+        return in_array($name, $this->getAdapter()->getAvailableSendParams());
     }
 
     public function isReceiveParamSupported($name)
     {
-        return in_array(strtolower($name), $this->getAdapter()->getAvailableReceiveParams());
+        return in_array($name, $this->getAdapter()->getAvailableReceiveParams());
     }
 
     /********************************************************************

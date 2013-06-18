@@ -26,6 +26,20 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
     const KEY_CONTENT     = 'c';
     const KEY_METADATA    = 'm';
 
+
+    /**
+     * List avaliable params for receiveMessages()
+     *
+     * @return array
+     */
+    public function getAvailableReceiveParams()
+    {
+        return array(
+            ReceiveParameters::CLASS_FILTER,
+        );
+    }
+
+
     /**
      * Ensure connection
      *

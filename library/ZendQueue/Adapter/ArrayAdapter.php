@@ -36,6 +36,20 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
     protected $_data = array();
 
 
+    /**
+     * List avaliable params for receiveMessages()
+     *
+     * @return array
+     */
+    public function getAvailableReceiveParams()
+    {
+        return array(
+            ReceiveParameters::VISIBILITY_TIMEOUT,
+            ReceiveParameters::CLASS_FILTER,
+        );
+    }
+
+
     /********************************************************************
     * Queue management functions
      *********************************************************************/
@@ -184,6 +198,9 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
             $maxMessages = 1;
         }
 
+        $timeout = $params ? $params->getVisibilityTimeout() : null;
+        $filter  = $params ? $params->getClassFilter() : null;
+
         $data = array();
         if ($maxMessages > 0) {
             $start_time = microtime(true);
@@ -191,10 +208,15 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
             $count = 0;
             $temp = &$this->_data[$queue->getName()];
             foreach ($temp as $messageId => &$msg) {
+
+                if (null !== $filter && $msg['class'] != $filter) {
+                    continue;
+                }
+
                 if ($msg['handle'] === null || ( $msg['timeout'] !== null && $msg['timeout'] < microtime(true))) {
 
                     $msg['handle']  = md5(uniqid(rand(), true));
-                    $msg['timeout'] = $params ? microtime(true) + $params->getTimeout() : null;
+                    $msg['timeout'] = $params ? microtime(true) + $timeout : null;
                     $msg['metadata'][$queue->getOptions()->getMessageMetadatumKey()] = $this->_buildMessageInfo(
                 		$messageId,
                 		$queue
