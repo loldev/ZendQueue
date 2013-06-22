@@ -40,13 +40,6 @@ abstract class AbstractAdapter implements AdapterInterface
     );
 
     /**
-     * Internal array of queues to save on lookups
-     *
-     * @var array
-     */
-    protected $_queues = array();
-
-    /**
      * Constructor.
      *
      * $options is an array of key/value pairs or an instance of Traversable
@@ -128,22 +121,30 @@ abstract class AbstractAdapter implements AdapterInterface
     }
 
     /**
+     * Build info for received message
+     *
+     * @param mixed $handle
      * @param mixed $id
      * @param Queue|string $queue
      * @param ParametersInterface|array $options
      * @return array
      */
-    protected function _buildMessageInfo($id, $queue, $options = null)
+    protected function _buildMessageInfo($handle, $id, $queue, $options = null)
     {
+        $name = $queue instanceof Queue ? $queue->getName() : (string) $queue;
         return array(
+            'handle'    => $handle,
             'messageId' => $id,
-            'queue'     => $queue instanceof Queue ? $queue->getName() : (string) $queue,
-            'adapter'   => get_class($this),
+            'queueId'   => $this->getQueueId($name),
+            'queueName' => $name,
+            'adapter'   => get_called_class(),
             'options'   => $options instanceof ParametersInterface ? $options->toArray() : (array) $options,
         );
     }
 
     /**
+     * Embed info into a sended message
+     *
      * @param Queue $queue
      * @param MessageInterface $message
      * @param mixed $id
@@ -152,15 +153,19 @@ abstract class AbstractAdapter implements AdapterInterface
      */
     protected function _embedMessageInfo(Queue $queue, MessageInterface $message, $id, $options = null)
     {
-        $message->setMetadata($queue->getOptions()->getMessageMetadatumKey(), $this->_buildMessageInfo($id, $queue, $options));
+        $message->setMetadata($queue->getOptions()->getMessageMetadatumKey(), $this->_buildMessageInfo(false, $id, $queue, $options));
     }
 
     /**
+     * Get message info
+     *
+     * Only received messages have embedded infos.
+     *
      * @param Queue $queue
      * @param MessageInterface $message
      * @return array
      */
-    protected function _extractMessageInfo(Queue $queue, MessageInterface $message)
+    public function getMessageInfo(Queue $queue, MessageInterface $message)
     {
        return $message->getMetadata($queue->getOptions()->getMessageMetadatumKey());
     }

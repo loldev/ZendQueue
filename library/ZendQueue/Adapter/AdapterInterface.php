@@ -22,10 +22,13 @@ use ZendQueue\Parameter\ReceiveParameters;
 interface AdapterInterface
 {
     /**
-     * Constructor
+     * Constructor.
      *
-     * array|Traversable $options
-     * @return void
+     * $options is an array of key/value pairs or an instance of Traversable
+     * containing configuration options.
+     *
+     * @param  array|Traversable $options An array having configuration data
+     * @throws Exception\InvalidArgumentException
      */
     public function __construct($options = array());
 
@@ -73,14 +76,21 @@ interface AdapterInterface
      * Queue management functions
     *********************************************************************/
 
+    /**
+     * Returns the ID of the queue
+     *
+     * @param string $name Queue name
+     * @return mixed
+     */
+    public function getQueueId($name);
 
     /**
-     * Does a queue already exist?
+     * Check if a queue exists
      *
      * @param  string $name Queue name
      * @return boolean
      */
-    public function isQueueExist($name);
+    public function queueExists($name);
 
     /**
      * Create a new queue
@@ -128,5 +138,16 @@ interface AdapterInterface
      * @throws Exception\RuntimeException
      */
     public function receiveMessages(Queue $queue, $maxMessages = null, ReceiveParameters $params = null);
+
+    /**
+     * Get message info
+     *
+     * Only received messages have embedded infos.
+     *
+     * @param Queue $queue
+     * @param MessageInterface $message
+     * @return array
+     */
+    public function getMessageInfo(Queue $queue, MessageInterface $message);
 
 }

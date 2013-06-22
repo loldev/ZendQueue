@@ -183,7 +183,7 @@ class Queue implements Countable
     public function ensureQueue()
     {
         $name = $this->getName();
-        if($this->getAdapter()->isQueueExist($name)) {
+        if($this->getAdapter()->queueExists($name)) {
             return true;
         }
 
@@ -205,7 +205,7 @@ class Queue implements Countable
 
         $deleted = false;
 
-        if($adapter->isQueueExist($name)) {
+        if($adapter->queueExists($name)) {
             $deleted = $adapter->deleteQueue($name);
         }
 
@@ -245,40 +245,6 @@ class Queue implements Countable
         }
 
         return $this->getAdapter()->sendMessage($this, $message, $params);
-    }
-
-
-    /**
-     * Schedule a message to the queue
-     *
-     * @param  mixed $message message
-     * @param  int $scheduleTime
-     * @param  int $repeatingInterval
-     * @param  SendParamters $params
-     * @return MessageInterface
-     * @throws Exception\UnsupportedMethodCallException
-     */
-    public function schedule($message, $scheduleTime = null, $repeatingInterval = null, SendParameters $params = null)
-    {
-        if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
-            throw new Exception\UnsupportedMethodCallException('\''.SendParameters::SCHEDULE.'\' param is not supported by ' . get_class($this->getAdapter()));
-        }
-
-        if ($interval !== null && !$this->isSendParamSupported(SendParameters::REPEATING_INTERVAL)) {
-            if (!$this->isSendParamSupported(SendParameters::REPEATING_INTERVAL)) {
-                throw new Exception\UnsupportedMethodCallException('\''.SendParameters::REPEATING_INTERVAL.'\' param is not supported by ' . get_class($this->getAdapter()));
-            }
-
-        }
-
-        if ($params === null) {
-            $params = new SendParameters();
-        }
-
-        $params->setSchedule($scheduleTime)
-               ->setRepeatingInterval($repeatingInterval);
-
-        return $this->send($message, $params);
     }
 
     /**
@@ -391,19 +357,70 @@ class Queue implements Countable
         return $this->getAdapter()->deleteMessage($this, $message);
     }
 
+
     /**
-     * Get an array of all available queues
+     * Schedule a message to the queue
      *
-     * @return array
+     * @param  mixed $message message
+     * @param  int $scheduleTime
+     * @param  int $repeatingInterval
+     * @param  SendParamters $params
+     * @return MessageInterface
      * @throws Exception\UnsupportedMethodCallException
      */
-    public function listQueues()
+    public function schedule($message, $scheduleTime = null, $repeatingInterval = null, SendParameters $params = null)
     {
-        if (!$this->canListQueues()) {
-            throw new Exception\UnsupportedMethodCallException(__FUNCTION__ . '() is not supported by ' . get_class($this->getAdapter()));
+        if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
+            throw new Exception\UnsupportedMethodCallException('\''.SendParameters::SCHEDULE.'\' param is not supported by ' . get_class($this->getAdapter()));
         }
 
-        return $this->getAdapter()->listQueues();
+        if ($interval !== null && !$this->isSendParamSupported(SendParameters::REPEATING_INTERVAL)) {
+            if (!$this->isSendParamSupported(SendParameters::REPEATING_INTERVAL)) {
+                throw new Exception\UnsupportedMethodCallException('\''.SendParameters::REPEATING_INTERVAL.'\' param is not supported by ' . get_class($this->getAdapter()));
+            }
+
+        }
+
+        if ($params === null) {
+            $params = new SendParameters();
+        }
+
+        $params->setSchedule($scheduleTime)
+        ->setRepeatingInterval($repeatingInterval);
+
+        return $this->send($message, $params);
+    }
+
+    /**
+     * Unschedule a message
+     * 
+     * @param MessageInterface $message
+     * @throws Exception\UnsupportedMethodCallException
+     * @return boolean
+     */
+    public function unschedule(MessageInterface $message)
+    {
+        if (!$this->isSendParamSupported(SendParameters::SCHEDULE)) {
+            throw new Exception\UnsupportedMethodCallException('\''.SendParameters::SCHEDULE.'\' param is not supported by ' . get_class($this->getAdapter()));
+        }
+
+        $info = $this->getAdapter()->getMessageInfo($this, $message);
+
+        $options = $info['options'];
+
+        if (isset($options[SendParameters::SCHEDULE])) {
+            unset($options[SendParameters::SCHEDULE]);
+        }
+
+        if (isset($options[SendParameters::REPEATING_INTERVAL])) {
+            unset($options[SendParameters::REPEATING_INTERVAL]);
+        }
+
+        $info['options'] = $options;
+
+        $message->setMetadata($queue->getOptions()->getMessageMetadatumKey(), $options);
+
+        return $this->deleteMessage($message);
     }
 
 
@@ -471,19 +488,6 @@ class Queue implements Countable
     public function canCountMessages()
     {
         return $this->getAdapter() instanceof CountMessagesCapableInterface;
-    }
-
-
-    /**
-     * Can list all available queues?
-     *
-     * Return true if the adapter can list all queues available for the current adapter.
-     *
-     * @return bool
-     */
-    public function canListQueues()
-    {
-        return $this->getAdapter() instanceof ListQueuesCapableInterface;
     }
 
 

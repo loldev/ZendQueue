@@ -58,8 +58,4 @@ class NullTest extends AdapterTest
         return array('driverOptions' => array());
     }
 
-    // test the constants
-    public function testConst()
-    {
-    }
 }

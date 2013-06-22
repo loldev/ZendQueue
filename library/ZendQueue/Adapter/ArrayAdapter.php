@@ -67,12 +67,27 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
     }
 
     /**
-     * Does a queue already exist?
+     * Returns the ID of the queue
+     *
+     * @param string $name Queue name
+     * @return string
+     */
+    public function getQueueId($name)
+    {
+        if ($this->queueExists($name)) {
+            return $name;
+        }
+        //else
+        return null;
+    }
+
+    /**
+     * Check if a queue exists
      *
      * @param string $name
      * @return boolean
      */
-    public function isQueueExist($name)
+    public function queueExists($name)
     {
         return array_key_exists($name, $this->_data);
     }
@@ -85,7 +100,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      */
     public function createQueue($name)
     {
-        if ($this->isQueueExist($name)) {
+        if ($this->queueExists($name)) {
             return false;
         }
 
@@ -154,7 +169,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      */
     public function sendMessage(Queue $queue, MessageInterface $message, SendParameters $params = null)
     {
-        if (!$this->isQueueExist($queue->getName())) {
+        if (!$this->queueExists($queue->getName())) {
             throw new Exception\QueueNotFoundException('Queue does not exist: ' . $queue->getName());
         }
 
@@ -218,6 +233,7 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
                     $msg['handle']  = md5(uniqid(rand(), true));
                     $msg['timeout'] = $params ? microtime(true) + $timeout : null;
                     $msg['metadata'][$queue->getOptions()->getMessageMetadatumKey()] = $this->_buildMessageInfo(
+                        $msg['handle'],
                 		$messageId,
                 		$queue
                     );
@@ -249,11 +265,11 @@ class ArrayAdapter extends AbstractAdapter implements DeleteMessageCapableInterf
      */
     public function deleteMessage(Queue $queue, MessageInterface $message)
     {
-        if (!$this->isQueueExist($queue->getName())) {
+        if (!$this->queueExists($queue->getName())) {
         	throw new Exception\QueueNotFoundException('Queue does not exist:' . $queue->getName());
         }
 
-        $info = $this->_extractMessageInfo($queue, $message);
+        $info = $this->getMessageInfo($queue, $message);
         $messageId = $info['messageId'];
 
         // load the queue

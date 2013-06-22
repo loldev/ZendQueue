@@ -34,12 +34,23 @@ class Null extends AbstractAdapter
     }
 
     /**
-     * Does a queue already exist?
+     * Returns the ID of the queue
+     *
+     * @param string $name Queue name
+     * @return string
+     */
+    public function getQueueId($name)
+    {
+        return null;
+    }
+
+    /**
+     * Check if a queue exists
      *
      * @param  string $name Queue name
      * @return bool
     */
-    public function isQueueExist($name)
+    public function queueExists($name)
     {
         return false;
     }

@@ -22,6 +22,7 @@ use ZendQueue\Adapter\AdapterFactory;
 use ZendQueue\Adapter\Capabilities\DeleteMessageCapableInterface;
 use ZendQueue\Adapter\Capabilities\ListQueuesCapableInterface;
 use ZendQueue\Adapter\Capabilities\CountMessagesCapableInterface;
+use ZendQueue\Adapter\Null;
 
 /*
  * The adapter test class provides a universal test class for all of the
@@ -83,7 +84,7 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
     public function getSupportedTests()
     {
         return array(
-            'createQueue', 'deleteQueue', 'isQueueExist', 'sendMessage', 'receiveMessages'
+            'createQueue', 'deleteQueue', 'queueExists', 'sendMessage', 'receiveMessages'
         );
     }
 
@@ -119,14 +120,14 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
             'options' => $this->getTestOptions(),
         ));
 
-        $queue   = new Queue($name, $adapter, $options);
-
-        if ($this->getAdapterName() != 'Null') {
-            $queue->ensureQueue();
+        if ($adapter instanceof Adapter\Null) {
+            return false;
         }
 
-        return $queue;
+        $queue   = new Queue($name, $adapter, $options);
+        $queue->ensureQueue();
 
+        return $queue;
     }
 
     public function handleErrors($errno, $errstr)
@@ -173,11 +174,6 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         return $this->adapterHasSupport($queue->getAdapter(), $needles);
     }
 
-    // test the constants
-    public function testConst()
-    {
-        $this->markTestSkipped('must be tested in each individual adapter');
-    }
 
     public function testSetGetOptions()
     {
@@ -321,8 +317,8 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
             return;
         }
 
-        if ($this->adapterHasSupport($adapter, array('isQueueExist'))) {
-            $this->assertTrue($adapter->isQueueExist($queue->getName()));
+        if ($this->adapterHasSupport($adapter, array('queueExists'))) {
+            $this->assertTrue($adapter->queueExists($queue->getName()));
         }
 
         // cannot recreate a queue.
@@ -368,17 +364,17 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $adapter = $queue->getAdapter();
 
         // check to see if this function is supported
-        $func = 'isQueueExist';
+        $func = 'queueExists';
         if (!$this->adapterHasSupport($adapter, $func)) {
             $this->markTestSkipped($func . '() is not supported');
             return;
         }
 
-        $this->assertFalse($adapter->isQueueExist('perl'));
+        $this->assertFalse($adapter->queueExists('perl'));
 
         $new = $this->createQueueName(__FUNCTION__ . '_3');
         $this->assertTrue($adapter->createQueue($new));
-        $this->assertTrue($adapter->isQueueExist($new));
+        $this->assertTrue($adapter->queueExists($new));
         $this->assertTrue($adapter->deleteQueue($new));
 
         if ($adapter instanceof ListQueuesCapableInterface) {
@@ -535,8 +531,8 @@ abstract class AdapterTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue(is_array($queues));
 
         // make sure our current queue is in this list.
-        if ($this->adapterHasSupport($adapter, 'isQueueExist')) {
-            $this->assertTrue($adapter->isQueueExist($queue->getName()));
+        if ($this->adapterHasSupport($adapter, 'queueExists')) {
+            $this->assertTrue($adapter->queueExists($queue->getName()));
         }
 
         // delete the queue we created

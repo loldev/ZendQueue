@@ -59,12 +59,6 @@ class ArrayTest extends AdapterTest
         return array('driverOptions' => array());
     }
 
-    // test the constants
-    public function testConst()
-    {
-        $this->markTestSkipped('no constants to test');
-    }
-
     // extra non standard tests
     public function test_magic()
     {

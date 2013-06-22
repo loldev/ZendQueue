@@ -16,8 +16,8 @@ class ReceiveParameters extends Parameters
 {
 
     const CLASS_FILTER = 'classFilter';
-    const VISIBILITY_TIMEOUT  = 'timeout';
-
+    const VISIBILITY_TIMEOUT  = 'visibilityTimeout';
+    const PEEK_MODE = 'peekMode';
 
     /**
      * Set the class filter
@@ -87,7 +87,38 @@ class ReceiveParameters extends Parameters
         return $this->get(self::VISIBILITY_TIMEOUT, null);
     }
 
+    /**
+     * Set peek mode
+     *
+     * If true, peek at the messages from the specified queue without removing them.
+     *
+     * @param bool $peek
+     * @throws Exception\InvalidArgumentException
+     * @return \ZendQueue\Parameter\ReceiveParameters
+     */
+    public function setPeekMode($peek = true)
+    {
+        if (!is_bool($peek)) {
+            throw new Exception\InvalidArgumentException('$peek must be a boolean');
+        }
 
+        $this->set(self::PEEK_MODE, $peek);
+        return $this;
+    }
+
+    /**
+     * Get peek mode
+     *
+     * @see setPeekMode()
+     *
+     * @param bool $peek
+     * @throws Exception\InvalidArgumentException
+     * @return \ZendQueue\Parameter\ReceiveParameters
+     */
+    public function getPeekMode()
+    {
+        return $this->get(self::PEEK_MODE, null);
+    }
 
 
 }
