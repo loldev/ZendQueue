@@ -138,19 +138,25 @@ abstract class AbstractWorkerController extends AbstractController
         switch (true) {
 
             case $message instanceof Forward:
-                return $this->forward()->dispatch($message->getContent(), $message->getMetadata());
+                $return = $this->forward()->dispatch($message->getContent(), $message->getMetadata());
+                break;
 
 
             case $message instanceof Request:
                 $client = new Client();
-                return $client->send($message);
+                $return = $client->send($message);
+                break;
 
             case $message instanceof WorkerMessageInterface:
-                return $this->workerMessageHandler($message);
+                $return = $this->workerMessageHandler($message);
+                break;
 
             default:
                 throw new Exception\InvalidMessageException('Message not supported.');
         }
+
+
+        return $return;
     }
 
 
@@ -165,8 +171,18 @@ abstract class AbstractWorkerController extends AbstractController
     {
         $this->await = true;
 
-        $handler = function(MessageInterface $message) {
+        $queue = $this->queue;
+
+        $handler = function(MessageInterface $message) use($queue) {
+
+            //TODO handle response
             $this->execute($message);
+
+            //TBD: right place to delete message?
+            if ($queue->canDeleteMessage()) {
+                $queue->deleteMessage($message);
+            }
+
             return $this->await;
         };
 
@@ -174,7 +190,7 @@ abstract class AbstractWorkerController extends AbstractController
 
         while($this->await) {
             try {
-                $this->queue->await($this->recvParams, $handler);
+                $queue->await($this->recvParams, $handler);
             } catch (\Exception $e) {
                 throw $e; //TODO: how handle errors?
             }
