@@ -78,7 +78,7 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
     public function connect()
     {
         $driverOptions = $this->getOptions()['driverOptions'];
-
+        
         if (isset($driverOptions['dsn']) && is_string($driverOptions['dsn'])) {
             $dsn = $driverOptions['dsn'];
         } else {
@@ -97,11 +97,17 @@ abstract class AbstractMongo extends AbstractAdapter implements CountMessagesCap
             $driverOptions['username'] . ':' . $driverOptions['password'] . '@'
                 :
                 '';
-
+            
             $dsn = "mongodb://$credentials{$driverOptions['host']}/{$driverOptions['dbname']}";
         }
 
-        $mongo = new \Mongo($dsn);
+		$options = array();
+            
+		if (isset($driverOptions['options'])) {
+			$options = $driverOptions['options'];
+		}
+
+        $mongo = new \Mongo($dsn, $options);
 
         $dbName = explode('/', $dsn);
         $dbName = array_pop($dbName);
