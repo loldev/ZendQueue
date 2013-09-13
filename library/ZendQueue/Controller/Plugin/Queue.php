@@ -16,25 +16,64 @@ use Zend\ServiceManager\ServiceLocatorAwareTrait;
 use ZendQueue\Parameter\SendParameters;
 use Zend\Http\Request;
 use ZendQueue\Controller\Message\Forward;
+use Zend\ServiceManager\ServiceLocatorInterface;
 
 class Queue extends AbstractPlugin implements ServiceLocatorAwareInterface
 {
     use ServiceLocatorAwareTrait;
 
     /**
+     * @var ServiceManager
+     */
+    protected $queueServiceLocator = null;
+
+    /**
      * @var \ZendQueue\Queue
      */
     protected $queue;
 
+    /**
+     * Set the queue service locator instace
+     *
+     * @param ServiceLocatorInterface $queueServiceLocator
+     * @return \ZendQueue\Controller\Plugin\Queue
+     */
+    public function setQueueServiceLocator(ServiceLocatorInterface $queueServiceLocator)
+    {
+        $this->queueServiceLocator = $queueServiceLocator;
+        return $this;
+    }
+
+    /**
+     * Retrieve the queue service locator
+     *
+     * @return ServiceLocatorInterface
+     */
+    public function getQueueServiceLocator()
+    {
+        return $this->queueServiceLocator;
+    }
+
+
+    /**
+     * Retrieve the queue
+     *
+     * @return \ZendQueue\Queue
+     */
     public function getQueue()
     {
         return $this->queue;
     }
 
+    /**
+     * @param mixed $queue
+     * @throws \InvalidArgumentException
+     * @return \ZendQueue\Controller\Plugin\Queue
+     */
     public function __invoke($queue)
     {
         if (is_string($queue)) {
-            $queue = $this->getServiceLocator()->get($queue);
+            $queue = $this->getQueueServiceLocator()->get($queue);
         }
 
         if (!$queue instanceof \ZendQueue\Queue) {
@@ -42,14 +81,20 @@ class Queue extends AbstractPlugin implements ServiceLocatorAwareInterface
         }
 
         $this->queue = $queue;
-
         return $this;
     }
 
 
+    /**
+     * Send a message to the queue
+     *
+     * @param mixed $message
+     * @param SendParameters $params
+     * @return \Zend\Stdlib\MessageInterface
+     */
     public function send($message, SendParameters $params = null)
     {
-        return $this->queue->send($message, $params);
+        return $this->getQueue()->send($message, $params);
     }
 
     /**
@@ -67,10 +112,18 @@ class Queue extends AbstractPlugin implements ServiceLocatorAwareInterface
             $message->setMetadata($params);
         }
 
-        $this->queue->send($message, $sendParams);
+        $this->getQueue()->send($message, $sendParams);
         return $message;
     }
 
+    /**
+     * Send an HTTP request message
+     *
+     * @param mixed $request
+     * @param SendParameters $sendParams
+     * @throws \InvalidArgumentException
+     * @return \Zend\Stdlib\MessageInterface
+     */
     public function http($request, SendParameters $sendParams = null)
     {
         if(is_string($request)) {
@@ -83,7 +136,7 @@ class Queue extends AbstractPlugin implements ServiceLocatorAwareInterface
             throw new \InvalidArgumentException('Invalid $request: must be an URI as string or an instace of \Zend\Http\Request');
         }
 
-        $this->queue->send($request, $sendParams);
+        $message = $this->getQueue()->send($request, $sendParams);
         return $message;
     }
 }
