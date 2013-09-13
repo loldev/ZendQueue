@@ -28,7 +28,7 @@ class QueueFactory implements FactoryInterface
         $services = $serviceLocator->getServiceLocator();
 
         $helper = new Queue();
-        $helper->setServiceManager($services);
+        $helper->setQueueServiceLocator($services);
 
         return $helper;
     }
