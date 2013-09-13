@@ -31,8 +31,8 @@ class AdapterPluginManager extends AbstractPluginManager
     protected $invokableClasses = array(
         'arrayadapter'   => 'ZendQueue\Adapter\ArrayAdapter',
         'db'             => 'ZendQueue\Adapter\Db',
-        'mongocapped'    => 'ZendQueue\Adapter\MongoCappedColletion',
-        'mongo'          => 'ZendQueue\Adapter\MongoColletion',
+        'mongocapped'    => 'ZendQueue\Adapter\MongoCappedCollection',
+        'mongo'          => 'ZendQueue\Adapter\MongoCollection',
         'null'           => 'ZendQueue\Adapter\Null',
     );
 

@@ -11,6 +11,7 @@
 namespace ZendQueue\Adapter;
 
 use ZendQueue\Exception;
+use Zend\Stdlib\ArrayUtils;
 
 abstract class AdapterFactory
 {
